@@ -31,10 +31,10 @@ def run_yuta_conv(session, nwbfile_path):
             # construct input_args dict according to input schema
             input_args = dict(
                 source_data=dict(
-                    GLXRecording=dict(
-                        file_path="D:/Neuropixels/Neuropixels/A256_bank1_2020_09_30/"
-                        "A256_bank1_2020_09_30_g0/A256_bank1_2020_09_30_g0_t0.imec0.ap.bin"
-                    ),
+                #     GLXRecording=dict(
+                #         file_path="D:/Neuropixels/Neuropixels/A256_bank1_2020_09_30/"
+                #         "A256_bank1_2020_09_30_g0/A256_bank1_2020_09_30_g0_t0.imec0.ap.bin"
+                #     ),
                     YutaPosition=dict(folder_path=session)
                 )
             )
