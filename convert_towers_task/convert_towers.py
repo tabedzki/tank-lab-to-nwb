@@ -23,7 +23,7 @@ for session in session_strings:
     nwbfile_paths.append(session + "_local_stub.nwb")
 
 
-def run_yuta_conv(session, nwbfile_path):
+def run_tower_conv(session, nwbfile_path):
     """Conversion function to be run in parallel."""
     if os.path.exists(session):
         print(f"Processsing {session}...")
@@ -35,7 +35,7 @@ def run_yuta_conv(session, nwbfile_path):
                 #         file_path="D:/Neuropixels/Neuropixels/A256_bank1_2020_09_30/"
                 #         "A256_bank1_2020_09_30_g0/A256_bank1_2020_09_30_g0_t0.imec0.ap.bin"
                 #     ),
-                    YutaPosition=dict(folder_path=session)
+                    TowerPosition=dict(folder_path=session)
                 )
             )
 
