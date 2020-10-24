@@ -1,6 +1,6 @@
 """Authors: Cody Baker and Ben Dichter."""
 from nwb_conversion_tools import NWBConverter
-from . import spikeglxdatainterface  # keeping this here until the nwb-conv-tools update
+from nwb_conversion_tools.spikeglxdatainterface import SpikeGLXRecordingInterface
 from .tankpositiondatainterface import TankPositionInterface
 import pandas as pd
 import numpy as np
@@ -12,7 +12,7 @@ from dateutil.parser import parse as dateparse
 
 class TankNWBConverter(NWBConverter):
     data_interface_classes = dict(
-            SpikeGLXRecording=spikeglxdatainterface.SpikeGLXRecordingInterface,
+            SpikeGLXRecording=SpikeGLXRecordingInterface,
             TankPosition=TankPositionInterface,
     )
 
