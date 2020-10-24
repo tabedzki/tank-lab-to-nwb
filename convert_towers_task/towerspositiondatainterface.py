@@ -2,10 +2,8 @@
 from nwb_conversion_tools.utils import get_base_schema, get_schema_from_hdmf_class
 from nwb_conversion_tools.basedatainterface import BaseDataInterface
 from pynwb import NWBFile
-from pynwb.file import TimeIntervals
 from pynwb.behavior import SpatialSeries, Position
 from hdmf.backends.hdf5.h5_utils import H5DataIO
-import os
 import numpy as np
 from pathlib import Path
 from scipy.io import loadmat
@@ -101,34 +99,11 @@ class TankPositionInterface(BaseDataInterface):
 
         """
         session_path = self.input_args['folder_path']
+        mat_file = session_path + ".mat"
+        matin = loadmat(mat_file)
         # TODO: move this to get_metadata in main converter
-        # session_start_time = metadata_dict['session_start_time']
-        mat_file = session_path + ".mat"
-        matin = loadmat(mat_file)
         session_start_time = date_array_to_dt(matin['log']['session'][0][0]['start'][0][0][0])
-
-        # task_types = metadata_dict['task_types']
-
-        subject_path, session_id = os.path.split(session_path)
-
-        pos_obj = Position(name='_position')
-
-        mat_file = session_path + ".mat"
-        matin = loadmat(mat_file)
-        pos_data = matin #[...]
-        tt = matin #[...]
-        conversion = 1 # need to change?
-        exp_times = matin #[...]
-
-        # Processed position
-        spatial_series_object = SpatialSeries(
-            name='_{}_spatial_series',
-            data=H5DataIO(pos_data, compression='gzip'),
-            reference_frame='unknown', conversion=conversion,
-            resolution=np.nan,
-            timestamps=H5DataIO(tt, compression='gzip'))
-        pos_obj.add_spatial_series(spatial_series_object)
-        check_module(nwbfile, 'behavior', 'contains processed behavioral data').add_data_interface(pos_obj)
+        # session_start_time = metadata_dict['session_start_time']
 
         # Intervals
         if Path(mat_file).is_file():
@@ -163,3 +138,19 @@ class TankPositionInterface(BaseDataInterface):
 
             for k in range(len(trial_starts)):
                 nwbfile.add_trial(start_time=trial_starts[k], stop_time=trial_ends[k])
+
+            # Processed position
+            pos_obj = Position(name='_position')
+
+            pos_data = matin #[...]
+            pos_timestamps = matin #[...]
+            conversion = 1 # need to change?
+
+            spatial_series_object = SpatialSeries(
+                name='_{}_spatial_series',
+                data=H5DataIO(pos_data, compression='gzip'),
+                reference_frame='unknown', conversion=conversion,
+                resolution=np.nan,
+                timestamps=H5DataIO(pos_timestamps, compression='gzip'))
+            pos_obj.add_spatial_series(spatial_series_object)
+            check_module(nwbfile, 'behavior', 'contains processed behavioral data').add_data_interface(pos_obj)
