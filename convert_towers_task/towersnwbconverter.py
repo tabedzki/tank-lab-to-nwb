@@ -6,8 +6,10 @@ import pandas as pd
 import numpy as np
 from scipy.io import loadmat
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.parser import parse as dateparse
+
+from .utils import convert_mat_file_to_dict
 
 
 class TankNWBConverter(NWBConverter):
@@ -27,27 +29,34 @@ class TankNWBConverter(NWBConverter):
         session_path = self.data_interface_objects['NeuroscopeSorting'].input_args['folder_path']
         subject_path, session_id = os.path.split(session_path)
 
-        date_text = "..."
+        session_name = os.path.splitext(session_id)[0]
+        date_text = [name for name in session_name.split('_') if name.isdigit()][0]
         session_start = dateparse(date_text, yearfirst=True)
 
-        # TODO: adjust this part to correctly pull relevant subject info
-        subject_filepath = "..."
-        subject_id = "..."
-        if os.path.isfile(subject_filepath):
-            subject_df = loadmat(subject_filepath)
-            subject_data = {}
-            for key in ['genotype', 'DOB', 'implantation', 'Probe', 'Surgery', 'virus injection', 'mouseID']:
-                names = subject_df.iloc[:, 0]
-                if key in names.values:
-                    subject_data[key] = subject_df.iloc[np.argmax(names == key), 1]
-            if isinstance(subject_data['DOB'], datetime):
-                age = str(session_start - subject_data['DOB'])
-            else:
-                age = None
+        if os.path.isfile(session_path):
+            session_data = convert_mat_file_to_dict(mat_file_name=session_path)
+            subject_data = session_data['log']['animal']
+
+            for key in ['name', 'importAge', 'normWeight', 'genotype']:
+                if key not in subject_data.keys():
+                    subject_data[key] = 'unknown'
+
+            subject_id = subject_data['name']
+            age = subject_data['importAge']
+            # TODO: check if assumption correct (importAge is in days)
+            if 'importDate' in subject_data:
+                date_text = '/'.join(map(str, subject_data['importDate']))
+                if isinstance(age, int):
+                    subject_data['date_of_birth'] = \
+                        datetime.strptime(date_text, "%Y/%m/%d") - timedelta(days=age)
+
         else:
+            subject_id = 'unknown'
             age = 'unknown'
             subject_data = {}
-            subject_data.update({'genotype': 'unknown'})
+            subject_data.update({'genotype': 'unknown',
+                                 'normWeight': 'unknown',
+                                 'date_of_birth': 'unknown'})
             print(f"Warning: no subject file detected for session {session_path}!")
 
         metadata = dict(
@@ -61,9 +70,11 @@ class TankNWBConverter(NWBConverter):
             ),
             Subject=dict(
                 subject_id=subject_id,
-                age=age,
+                age=str(age),  # TODO: check format (days?)
                 species="Mus musculus",  # TODO: check species
-                weight="..."  # TODO: fill in
+                weight=str(subject_data['normWeight']),
+                genotype=subject_data['genotype'],
+                date_of_birth=subject_data['date_of_birth']
             ),
             # self.get_recording_type(): {
             #     'Ecephys': {
