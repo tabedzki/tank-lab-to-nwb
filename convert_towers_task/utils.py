@@ -50,13 +50,13 @@ def find_discontinuities(tt, factor=10000):
         return np.array([[tt[0], tt[-1]]])
 
 
-def _todict(mat_struct):
+def mat_obj_to_dict(mat_struct):
     """Recursive function to convert nested matlab struct objects to dictionaries."""
     dict_from_struct = {}
     for field_name in mat_struct.__dict__['_fieldnames']:
         dict_from_struct[field_name] = mat_struct.__dict__[field_name]
         if isinstance(dict_from_struct[field_name], matlab.mio5_params.mat_struct):
-            dict_from_struct[field_name] = _todict(dict_from_struct[field_name])
+            dict_from_struct[field_name] = mat_obj_to_dict(dict_from_struct[field_name])
     return dict_from_struct
 
 
@@ -70,7 +70,7 @@ def convert_mat_file_to_dict(mat_file_name):
     data = loadmat(mat_file_name, struct_as_record=False, squeeze_me=True)
     for key in data:
         if isinstance(data[key], matlab.mio5_params.mat_struct):
-            data[key] = _todict(data[key])
+            data[key] = mat_obj_to_dict(data[key])
     return data
 
 
