@@ -1,6 +1,7 @@
 """Authors: Ben Dichter, Cody Baker."""
 import numpy as np
 from scipy.io import loadmat, matlab
+from dateutil.parser import parse as dateparse
 
 try:
     from typing import ArrayLike
@@ -49,20 +50,43 @@ def find_discontinuities(tt, factor=10000):
         return np.array([[tt[0], tt[-1]]])
 
 
-def convert_mat_file_to_dict(mat_file_name):
-    """Convert mat-file to dictionary object. It calls a recursive function to convert all entries
-    that are still matlab objects to dictionaries."""
-    def _todict(mat_struct):
-        """Recursive function to convert nested matlab struct objects to dictionaries"""
-        dict_from_struct = {}
-        for field_name in mat_struct.__dict__['_fieldnames']:
-            dict_from_struct[field_name] = mat_struct.__dict__[field_name]
-            if isinstance(dict_from_struct[field_name], matlab.mio5_params.mat_struct):
-                dict_from_struct[field_name] = _todict(dict_from_struct[field_name])
-        return dict_from_struct
+def _todict(mat_struct):
+    """Recursive function to convert nested matlab struct objects to dictionaries."""
+    dict_from_struct = {}
+    for field_name in mat_struct.__dict__['_fieldnames']:
+        dict_from_struct[field_name] = mat_struct.__dict__[field_name]
+        if isinstance(dict_from_struct[field_name], matlab.mio5_params.mat_struct):
+            dict_from_struct[field_name] = _todict(dict_from_struct[field_name])
+    return dict_from_struct
 
+
+def convert_mat_file_to_dict(mat_file_name):
+    """
+    Convert mat-file to dictionary object.
+
+    It calls a recursive function to convert all entries
+    that are still matlab objects to dictionaries.
+    """
     data = loadmat(mat_file_name, struct_as_record=False, squeeze_me=True)
     for key in data:
         if isinstance(data[key], matlab.mio5_params.mat_struct):
             data[key] = _todict(data[key])
     return data
+
+
+def date_array_to_dt(array):
+    """
+    Auxiliary function for converting the array of datetime information into datetime objects.
+
+    Parameters
+    ----------
+    array : array of floats of the form [Y,M,D,H,M,S].
+
+    Returns
+    -------
+    datetime
+
+    """
+    temp = [str(round(x)) for x in array[0][0:-1]]
+    date_text = temp[0] + "-" + temp[1] + "-" + temp[2] + "T" + temp[3] + ":" + temp[4] + ":" + str(array[0][-1])
+    return dateparse(date_text)

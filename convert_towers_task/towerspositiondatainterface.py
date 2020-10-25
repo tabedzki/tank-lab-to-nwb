@@ -7,27 +7,8 @@ from hdmf.backends.hdf5.h5_utils import H5DataIO
 import numpy as np
 from pathlib import Path
 from scipy.io import loadmat
-from dateutil.parser import parse as dateparse
 from datetime import timedelta
-from .utils import check_module
-
-
-def date_array_to_dt(array):
-    """
-    Auxiliary function for converting the array of datetime information into datetime objects.
-
-    Parameters
-    ----------
-    array : array of floats of the form [Y,M,D,H,M,S].
-
-    Returns
-    -------
-    datetime
-
-    """
-    temp = [str(round(x)) for x in array[0][0:-1]]
-    date_text = temp[0] + "-" + temp[1] + "-" + temp[2] + "T" + temp[3] + ":" + temp[4] + ":" + str(array[0][-1])
-    return dateparse(date_text)
+from .utils import check_module, date_array_to_dt
 
 
 class TankPositionInterface(BaseDataInterface):
