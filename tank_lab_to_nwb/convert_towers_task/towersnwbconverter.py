@@ -43,6 +43,7 @@ class TowersNWBConverter(NWBConverter):
 
             subject_id = subject_data['name']
             age = subject_data['importAge']
+            subject_data['date_of_birth'] = None
             # TODO: check if assumption correct (importAge is in days)
             if 'importDate' in subject_data:
                 date_text = '/'.join(map(str, subject_data['importDate']))
@@ -56,7 +57,7 @@ class TowersNWBConverter(NWBConverter):
             subject_data = {}
             subject_data.update({'genotype': 'unknown',
                                  'normWeight': 'unknown',
-                                 'date_of_birth': 'unknown'})
+                                 'date_of_birth': None})
             print(f"Warning: no subject file detected for session {session_path}!")
 
         metadata = dict(
