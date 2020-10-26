@@ -19,13 +19,14 @@ paper_info = ""
 
 session_strings = ["PoissonBlocksReboot_cohort1_VRTrain6_E75_T_20181105"]
 nwbfile_paths = []
-for session in session_strings:
-    nwbfile_paths.append(session + "_local_stub.nwb")
+for j, session in enumerate(session_strings):
+    session_strings[j] = os.path.join(base_path, session_strings[j])
+    nwbfile_paths.append(os.path.join(base_path, session) + "_local_stub.nwb")
 
 
 def run_tower_conv(session, nwbfile_path):
     """Conversion function to be run in parallel."""
-    if os.path.exists(session):
+    if os.path.exists(base_path):
         print(f"Processsing {session}...")
         if not os.path.isfile(nwbfile_path):
             # construct input_args dict according to input schema
@@ -35,7 +36,7 @@ def run_tower_conv(session, nwbfile_path):
                 #         file_path="D:/Neuropixels/Neuropixels/A256_bank1_2020_09_30/"
                 #         "A256_bank1_2020_09_30_g0/A256_bank1_2020_09_30_g0_t0.imec0.ap.bin"
                 #     ),
-                    TowerPosition=dict(folder_path=session)
+                    TowersPosition=dict(folder_path=session)
                 )
             )
 
@@ -57,7 +58,7 @@ def run_tower_conv(session, nwbfile_path):
             #     electrode_group_metadata.update({'device_name': 'implant'})
 
             converter.run_conversion(nwbfile_path=nwbfile_path, metadata_dict=metadata,
-                                     stub_test=True, save_to_file=True)
+                                     stub_test=True)
     else:
         print(f"The folder ({session}) does not exist!")
 

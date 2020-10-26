@@ -14,8 +14,8 @@ from .utils import convert_mat_file_to_dict
 
 class TankNWBConverter(NWBConverter):
     data_interface_classes = dict(
-            SpikeGLXRecording=SpikeGLXRecordingInterface,
-            TankPosition=TowersPositionInterface,
+#            SpikeGLXRecording=SpikeGLXRecordingInterface,
+            TowersPosition=TowersPositionInterface,
     )
 
     def __init__(self, **input_args):
@@ -26,7 +26,7 @@ class TankNWBConverter(NWBConverter):
         return self._recording_type
 
     def get_metadata(self):
-        session_path = self.data_interface_objects['NeuroscopeSorting'].input_args['folder_path']
+        session_path = self.data_interface_objects['TowersPosition'].input_args['folder_path']
         subject_path, session_id = os.path.split(session_path)
 
         session_name = os.path.splitext(session_id)[0]

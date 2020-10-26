@@ -31,16 +31,14 @@ class TowersPositionInterface(BaseDataInterface):
 
         """
         return dict(
-            source_data=dict(
-                required=['folder_path'],
-                properties=dict(
-                    folder_path=dict(type='string')
-                )
+            required=['folder_path'],
+            properties=dict(
+                folder_path=dict(type='string')
             )
         )
 
-    def __init__(self, **input_args):
-        super().__init__(**input_args)
+    def __init__(self, folder_path, **input_args):
+        self.input_args = dict(folder_path=folder_path)
 
     def get_metadata_schema(self):
         """
