@@ -9,7 +9,7 @@ import os
 from datetime import datetime, timedelta
 from dateutil.parser import parse as dateparse
 
-from .utils import convert_mat_file_to_dict
+from ..utils import convert_mat_file_to_dict
 
 
 class TowersNWBConverter(NWBConverter):
@@ -33,32 +33,6 @@ class TowersNWBConverter(NWBConverter):
         date_text = [name for name in session_name.split('_') if name.isdigit()][0]
         session_start = dateparse(date_text, yearfirst=True)
 
-        if os.path.isfile(session_path):
-            session_data = convert_mat_file_to_dict(mat_file_name=session_path)
-            subject_data = session_data['log']['animal']
-
-            for key in ['name', 'importAge', 'normWeight', 'genotype']:
-                if key not in subject_data.keys():
-                    subject_data[key] = 'unknown'
-
-            subject_id = subject_data['name']
-            age = subject_data['importAge']
-            # TODO: check if assumption correct (importAge is in days)
-            if 'importDate' in subject_data:
-                date_text = '/'.join(map(str, subject_data['importDate']))
-                if isinstance(age, int):
-                    subject_data['date_of_birth'] = \
-                        datetime.strptime(date_text, "%Y/%m/%d") - timedelta(days=age)
-
-        else:
-            subject_id = 'unknown'
-            age = 'unknown'
-            subject_data = {}
-            subject_data.update({'genotype': 'unknown',
-                                 'normWeight': 'unknown',
-                                 'date_of_birth': 'unknown'})
-            print(f"Warning: no subject file detected for session {session_path}!")
-
         metadata = dict(
             NWBFile=dict(
                 identifier=session_id,
@@ -69,12 +43,6 @@ class TowersNWBConverter(NWBConverter):
                 lab="Tank"
             ),
             Subject=dict(
-                subject_id=subject_id,
-                age=str(age),  # TODO: check format (days?)
-                species="Mus musculus",  # TODO: check species
-                weight=str(subject_data['normWeight']),
-                genotype=subject_data['genotype'],
-                date_of_birth=subject_data['date_of_birth']
             ),
             # self.get_recording_type(): {
             #     'Ecephys': {
@@ -104,7 +72,20 @@ class TowersNWBConverter(NWBConverter):
             #         }
             #     }
             # },
-            TankPosition=dict()
+            TowersPosition=dict()
         )
+
+        if os.path.isfile(session_path+".mat"):
+            session_data = convert_mat_file_to_dict(mat_file_name=session_path)
+            subject_data = session_data['log']['animal']
+
+            for key in ['name', 'importAge', 'normWeight', 'genotype']:
+                if key not in subject_data.keys():
+                    subject_data[key] = 'unknown'
+
+            metadata['Subject'].update(subject_id=subject_data['name'])
+            metadata['Subject'].update(age=str(subject_data['importAge']))
+        else:
+            print(f"Warning: no subject file detected for session {session_path}!")
 
         return metadata

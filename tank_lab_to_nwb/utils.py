@@ -87,6 +87,6 @@ def date_array_to_dt(array):
     datetime
 
     """
-    temp = [str(round(x)) for x in array[0][0:-1]]
-    date_text = temp[0] + "-" + temp[1] + "-" + temp[2] + "T" + temp[3] + ":" + temp[4] + ":" + str(array[0][-1])
+    temp = [str(round(x)) for x in array[0:-1]]
+    date_text = temp[0] + "-" + temp[1] + "-" + temp[2] + "T" + temp[3] + ":" + temp[4] + ":" + str(array[-1])
     return dateparse(date_text)

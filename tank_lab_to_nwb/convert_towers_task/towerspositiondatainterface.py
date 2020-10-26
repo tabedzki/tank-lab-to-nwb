@@ -125,11 +125,11 @@ class TowersPositionInterface(BaseDataInterface):
             pos_timestamps = matin #[...]
             conversion = 1 # need to change?
 
-            spatial_series_object = SpatialSeries(
-                name='_{}_spatial_series',
-                data=H5DataIO(pos_data, compression='gzip'),
-                reference_frame='unknown', conversion=conversion,
-                resolution=np.nan,
-                timestamps=H5DataIO(pos_timestamps, compression='gzip'))
-            pos_obj.add_spatial_series(spatial_series_object)
-            check_module(nwbfile, 'behavior', 'contains processed behavioral data').add_data_interface(pos_obj)
+            # spatial_series_object = SpatialSeries(
+            #     name='_{}_spatial_series',
+            #     data=H5DataIO(pos_data, compression='gzip'),
+            #     reference_frame='unknown', conversion=conversion,
+            #     resolution=np.nan,
+            #     timestamps=H5DataIO(pos_timestamps, compression='gzip'))
+            # pos_obj.add_spatial_series(spatial_series_object)
+            # check_module(nwbfile, 'behavior', 'contains processed behavioral data').add_data_interface(pos_obj)

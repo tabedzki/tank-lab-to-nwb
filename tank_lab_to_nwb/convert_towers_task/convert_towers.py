@@ -1,5 +1,5 @@
 """Authors: Cody Baker and Ben Dichter."""
-from tank_lab_to_nwb import TankNWBConverter
+from tank_lab_to_nwb import TowersNWBConverter
 
 # TODO: add pathlib
 import os
@@ -40,7 +40,7 @@ def run_tower_conv(session, nwbfile_path):
                 )
             )
 
-            converter = TankNWBConverter(**input_args)
+            converter = TowersNWBConverter(**input_args)
             metadata = converter.get_metadata()
 
             # Session specific info
@@ -57,8 +57,7 @@ def run_tower_conv(session, nwbfile_path):
             #     electrode_group_metadata.update({'location': 'unknown'})
             #     electrode_group_metadata.update({'device_name': 'implant'})
 
-            converter.run_conversion(nwbfile_path=nwbfile_path, metadata_dict=metadata,
-                                     stub_test=True)
+            converter.run_conversion(nwbfile_path=nwbfile_path, metadata_dict=metadata, stub_test=True)
     else:
         print(f"The folder ({session}) does not exist!")
 
