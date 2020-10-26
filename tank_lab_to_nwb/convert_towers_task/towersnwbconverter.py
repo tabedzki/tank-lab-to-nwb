@@ -85,6 +85,7 @@ class TowersNWBConverter(NWBConverter):
 
             metadata['Subject'].update(subject_id=subject_data['name'])
             metadata['Subject'].update(age=str(subject_data['importAge']))
+            metadata['Subject'].update(weight=str(subject_data['normWeight']))
         else:
             print(f"Warning: no subject file detected for session {session_path}!")
 
