@@ -12,7 +12,7 @@ from dateutil.parser import parse as dateparse
 from .utils import convert_mat_file_to_dict
 
 
-class TankNWBConverter(NWBConverter):
+class TowersNWBConverter(NWBConverter):
     data_interface_classes = dict(
 #            SpikeGLXRecording=SpikeGLXRecordingInterface,
             TowersPosition=TowersPositionInterface,
