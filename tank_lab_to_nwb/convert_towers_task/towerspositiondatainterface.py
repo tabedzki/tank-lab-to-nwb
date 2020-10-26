@@ -37,9 +37,6 @@ class TowersPositionInterface(BaseDataInterface):
             )
         )
 
-    def __init__(self, folder_path, **input_args):
-        self.input_args = dict(folder_path=folder_path)
-
     def get_metadata_schema(self):
         """
         Place description here.
@@ -60,8 +57,7 @@ class TowersPositionInterface(BaseDataInterface):
 
         return metadata_schema
 
-    def convert_data(self, nwbfile: NWBFile, metadata_dict: dict,
-                     stub_test: bool = False, include_spike_waveforms: bool = False):
+    def convert_data(self, nwbfile: NWBFile, metadata_dict: dict, stub_test: bool = False):
         """
         Primary conversion function for the custom ttank lab positional interface.
 
@@ -72,8 +68,6 @@ class TowersPositionInterface(BaseDataInterface):
         metadata_dict : dict
             DESCRIPTION.
         stub_test : bool, optional
-            DESCRIPTION. The default is False.
-        include_spike_waveforms : bool, optional
             DESCRIPTION. The default is False.
 
         """

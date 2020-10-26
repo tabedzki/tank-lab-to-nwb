@@ -1,7 +1,7 @@
 """Authors: Cody Baker and Ben Dichter."""
 from nwb_conversion_tools import NWBConverter
 from nwb_conversion_tools import SpikeGLXRecordingInterface
-from tank_lab_to_nwb.convert_towers_task.towerspositiondatainterface import TowersPositionInterface
+from .towerspositiondatainterface import TowersPositionInterface
 import pandas as pd
 import numpy as np
 from scipy.io import loadmat
@@ -79,13 +79,10 @@ class TowersNWBConverter(NWBConverter):
             session_data = convert_mat_file_to_dict(mat_file_name=session_path)
             subject_data = session_data['log']['animal']
 
-            for key in ['name', 'importAge', 'normWeight', 'genotype']:
-                if key not in subject_data.keys():
-                    subject_data[key] = 'unknown'
-
-            metadata['Subject'].update(subject_id=subject_data['name'])
-            metadata['Subject'].update(age=str(subject_data['importAge']))
-            metadata['Subject'].update(weight=str(subject_data['normWeight']))
+            key_map = dict(name='subject_id', importAge='age', importWeight='weight')
+            [metadata['Subject'].update({key_map[k]: str(subject_data[k])}) for k in key_map if k in subject_data]
+            # TODO: adjust age string to proper NWB format
+            # metadata['Subject'].update(age=str(subject_data['importAge']))
         else:
             print(f"Warning: no subject file detected for session {session_path}!")
 

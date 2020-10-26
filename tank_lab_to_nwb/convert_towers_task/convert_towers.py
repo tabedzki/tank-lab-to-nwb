@@ -13,10 +13,6 @@ base_path = "D:/Neuropixels/TowersTask"
 # Manual list of selected sessions that cause problems with the general functionality
 exlude_sessions = []
 
-experimenter = ""
-paper_descr = ""
-paper_info = ""
-
 session_strings = ["PoissonBlocksReboot_cohort1_VRTrain6_E75_T_20181105"]
 nwbfile_paths = []
 for j, session in enumerate(session_strings):
@@ -43,12 +39,9 @@ def run_tower_conv(session, nwbfile_path):
             converter = TowersNWBConverter(**input_args)
             metadata = converter.get_metadata()
 
-            # Session specific info
-            metadata['NWBFile'].update({'experimenter': experimenter})
-            metadata['NWBFile'].update({'session_description': paper_descr})
-            metadata['NWBFile'].update({'related_publications': paper_info})
-
-            metadata['Subject'].update({'species': "Mus musculus"})
+            # Session specific metadata
+            metadata['NWBFile'].update(session_description="")
+            metadata['Subject'].update(species="Mus musculus")
 
             # metadata[yuta_converter.get_recording_type()]['Ecephys']['Device'][0].update({'name': 'implant'})
 
