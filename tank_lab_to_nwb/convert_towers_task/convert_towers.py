@@ -27,13 +27,11 @@ def run_tower_conv(session, nwbfile_path):
         if not os.path.isfile(nwbfile_path):
             # construct input_args dict according to input schema
             input_args = dict(
-                source_data=dict(
                 #     GLXRecording=dict(
                 #         file_path="D:/Neuropixels/Neuropixels/A256_bank1_2020_09_30/"
                 #         "A256_bank1_2020_09_30_g0/A256_bank1_2020_09_30_g0_t0.imec0.ap.bin"
                 #     ),
-                    TowersPosition=dict(folder_path=session)
-                )
+                TowersPosition=dict(folder_path=session)
             )
 
             converter = TowersNWBConverter(**input_args)
