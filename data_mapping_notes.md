@@ -16,7 +16,7 @@ This matlab file contains a struct named "log" which contains several fields rel
   * log.animal.normWeight -> Subject weight [but was is the 'norm'?]
   * log.animal.importAge -> Subject age [what units?]
 
-[Unable to find species or genotype information here. Assuming Mus musculus, genotype not strictly necessary.]
+[Unable to find species information here. Assuming Mus musculus.]
 
 
 ### Position (processed, not acquisition)
@@ -31,7 +31,9 @@ This matlab file contains a struct named "log" which contains several fields rel
 ###### See Position for introduction to block and trial structure within the struct
 * log.block(j).start contains an array of datetime information for the start of epoch j
 * log.block(j).duration contains the number of seconds epoch j lasted for
-* log.block(j).trial(k).start contains a float of the time difference (in seconds) between the start of the first epoch (not the session start time!) and the start of trial k [can they triple chech this?]
+* log.block(j).trial(k).start contains a float of the time difference (in seconds) between the start of the first epoch (not the session start time!) and the start of trial k [can they triple check this?]
 * log.block(j).trial(k).duration contains the duration (in seconds) of trial k of epoch j
+
+[I noticed that there is overlap between end and start times of consecutive epochs on the order of 0.1 seconds or so. Similarly, some but not all of the trials partially overlap on the order of a few microseconds or so. Is this a feature of their system?]
 
 Since trials are concatenated in NWBFiles distinct from but in line with the actual epochs, the trial intervals will have to be pulled and assembled in order.
