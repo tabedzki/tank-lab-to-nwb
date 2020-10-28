@@ -1,22 +1,19 @@
 """Authors: Cody Baker and Ben Dichter."""
-from nwb_conversion_tools import NWBConverter
-from nwb_conversion_tools import SpikeGLXRecordingInterface
-from .towerspositiondatainterface import TowersPositionInterface
-import pandas as pd
-import numpy as np
-from scipy.io import loadmat
 import os
 from datetime import datetime, timedelta
+
 from dateutil.parser import parse as dateparse
 from isodate import duration_isoformat
+from nwb_conversion_tools import NWBConverter
 
+from .towerspositiondatainterface import TowersPositionInterface
 from ..utils import convert_mat_file_to_dict
 
 
 class TowersNWBConverter(NWBConverter):
     data_interface_classes = dict(
-#            SpikeGLXRecording=SpikeGLXRecordingInterface,
-            TowersPosition=TowersPositionInterface,
+        #            SpikeGLXRecording=SpikeGLXRecordingInterface,
+        TowersPosition=TowersPositionInterface,
     )
 
     def __init__(self, **input_args):
@@ -76,7 +73,7 @@ class TowersNWBConverter(NWBConverter):
             TowersPosition=dict()
         )
 
-        if os.path.isfile(session_path+".mat"):
+        if os.path.isfile(session_path + ".mat"):
             session_data = convert_mat_file_to_dict(mat_file_name=session_path)
             subject_data = session_data['log']['animal']
 

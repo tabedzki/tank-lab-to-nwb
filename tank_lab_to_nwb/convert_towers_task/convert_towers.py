@@ -1,9 +1,10 @@
 """Authors: Cody Baker and Ben Dichter."""
-from tank_lab_to_nwb import TowersNWBConverter
-
 # TODO: add pathlib
 import os
+
 from joblib import Parallel, delayed
+
+from tank_lab_to_nwb import TowersNWBConverter
 
 n_jobs = 1  # number of parallel streams to run
 

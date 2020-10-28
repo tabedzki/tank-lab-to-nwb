@@ -1,12 +1,14 @@
 """Authors: Cody Baker and Ben Dichter."""
-from nwb_conversion_tools.utils import get_base_schema, get_schema_from_hdmf_class
+from datetime import timedelta
+from pathlib import Path
+
+import numpy as np
+from hdmf.backends.hdf5.h5_utils import H5DataIO
 from nwb_conversion_tools.basedatainterface import BaseDataInterface
+from nwb_conversion_tools.utils import get_base_schema, get_schema_from_hdmf_class
 from pynwb import NWBFile
 from pynwb.behavior import SpatialSeries, Position
-from hdmf.backends.hdf5.h5_utils import H5DataIO
-import numpy as np
-from pathlib import Path
-from datetime import timedelta
+
 from ..utils import check_module, date_array_to_dt, convert_mat_file_to_dict, mat_obj_to_dict
 
 
@@ -94,7 +96,7 @@ class TowersPositionInterface(BaseDataInterface):
                 epoch_windows.append([start.total_seconds(), end.total_seconds()])
 
             for j, window in enumerate(epoch_windows):
-                nwbfile.add_epoch(start_time=window[0], stop_time=window[1], label='Epoch'+str(j))
+                nwbfile.add_epoch(start_time=window[0], stop_time=window[1], label='Epoch' + str(j))
 
             trial_start_fields = []
             trial_duration_fields = []
@@ -103,8 +105,8 @@ class TowersPositionInterface(BaseDataInterface):
                 trial_start_fields.append(blocks[0][0]['trial'][0][j]['start'][0])
                 trial_duration_fields.append(blocks[0][0]['trial'][0][j]['duration'][0])
                 n_trials.append(len(trial_start_fields[j]))
-            trial_starts = [y[0][0]+epoch_windows[j][0] for j, x in enumerate(trial_start_fields) for y in x]
-            trial_ends = [y1[0][0]+epoch_windows[j][0]+y2[0][0]
+            trial_starts = [y[0][0] + epoch_windows[j][0] for j, x in enumerate(trial_start_fields) for y in x]
+            trial_ends = [y1[0][0] + epoch_windows[j][0] + y2[0][0]
                           for j, x in enumerate(zip(trial_start_fields, trial_duration_fields))
                           for y1, y2 in zip(x[0], x[1])]
 
