@@ -58,7 +58,7 @@ class TowersPositionInterface(BaseDataInterface):
 
     def convert_data(self, nwbfile: NWBFile, metadata_dict: dict, stub_test: bool = False):
         """
-        Primary conversion function for the custom ttank lab positional interface.
+        Primary conversion function for the custom tank lab positional interface.
 
         Parameters
         ----------
@@ -87,29 +87,24 @@ class TowersPositionInterface(BaseDataInterface):
             for j in range(n_epochs):
                 start = epoch_start_dts[j] - session_start_time
                 end = start + epoch_durations[j]
-                nwbfile.add_epoch(start_time=start, stop_time=end, label='Epoch'+str(j))
+                nwbfile.add_epoch(
+                    start_time=start.total_seconds(),
+                    stop_time=end.total_seconds(),
+                    label='Epoch'+str(j+1)
+                )
 
             trial_starts = [trial.start for epoch in matin['log']['block'] for trial in epoch.trial]
-            trial_duration_fields = []
-            n_trials = []
-            for j in range(n_epochs):
-                trial_start_fields.append(blocks[0][0]['trial'][0][j]['start'][0])
-                trial_duration_fields.append(blocks[0][0]['trial'][0][j]['duration'][0])
-                n_trials.append(len(trial_start_fields[j]))
-            trial_starts = [y[0][0]+epoch_windows[j][0] for j, x in enumerate(trial_start_fields) for y in x]
-            trial_ends = [y1[0][0]+epoch_windows[j][0]+y2[0][0]
-                          for j, x in enumerate(zip(trial_start_fields, trial_duration_fields))
-                          for y1, y2 in zip(x[0], x[1])]
-
+            trial_durations = [trial.duration for epoch in matin['log']['block'] for trial in epoch.trial]
+            trial_ends = [start_time + duration for start_time, duration in zip(trial_starts, trial_durations)]
             for k in range(len(trial_starts)):
                 nwbfile.add_trial(start_time=trial_starts[k], stop_time=trial_ends[k])
 
             # Processed position
-            pos_obj = Position(name='_position')
+            pos_obj = Position(name="PositionSeries")
 
             pos_data = np.empty((0, 3))
             pos_timestamps = []
-            for block in blocks:
+            for block in matin['log']['block']:
                 block = mat_obj_to_dict(block)
                 for trial in block['trial']:
                     trial = mat_obj_to_dict(trial)
@@ -119,14 +114,12 @@ class TowersPositionInterface(BaseDataInterface):
                     pos_timestamps.extend(trial_truncated_time)
                     pos_data = np.concatenate([pos_data, trial_position], axis=0)
 
-            conversion = 1.0  # need to change?
-
             spatial_series_object = SpatialSeries(
-                name='_{}_spatial_series',
-                data=H5DataIO(pos_data, compression='gzip'),
-                reference_frame='unknown', conversion=conversion,
+                name="SpatialSeries",
+                data=H5DataIO(pos_data, compression="gzip"),
+                reference_frame="unknown",
                 resolution=np.nan,
-                timestamps=H5DataIO(pos_timestamps, compression='gzip')
+                timestamps=H5DataIO(pos_timestamps, compression="gzip")
             )
             pos_obj.add_spatial_series(spatial_series_object)
             check_module(nwbfile, 'behavior', 'contains processed behavioral data').add_data_interface(pos_obj)

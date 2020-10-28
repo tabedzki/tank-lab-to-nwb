@@ -76,6 +76,6 @@ def convert_mat_file_to_dict(mat_file_name):
 
 def array_to_dt(array):
     """Convert array of floats to datetime object."""
-    dt_input = [x for x in array[:-1]]
-    dt_input.append(array[-1])
+    dt_input = [int(x) for x in array]
+    dt_input.append(round(np.mod(array[-1], 1) * 10**6))
     return datetime(*dt_input)
