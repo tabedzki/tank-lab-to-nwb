@@ -1,12 +1,14 @@
 """Authors: Cody Baker and Ben Dichter."""
-from nwb_conversion_tools.utils import get_base_schema, get_schema_from_hdmf_class
+from datetime import timedelta
+from pathlib import Path
+
+import numpy as np
+from hdmf.backends.hdf5.h5_utils import H5DataIO
 from nwb_conversion_tools.basedatainterface import BaseDataInterface
+from nwb_conversion_tools.utils import get_base_schema, get_schema_from_hdmf_class
 from pynwb import NWBFile
 from pynwb.behavior import SpatialSeries, Position
-from hdmf.backends.hdf5.h5_utils import H5DataIO
-import numpy as np
-from pathlib import Path
-from datetime import timedelta
+
 from ..utils import check_module, convert_mat_file_to_dict, mat_obj_to_dict, array_to_dt
 
 
