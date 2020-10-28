@@ -37,7 +37,7 @@ class TowersNWBConverter(NWBConverter):
         metadata = dict(
             NWBFile=dict(
                 identifier=session_id,
-                session_start_time=session_start.astimezone().isoformat(),
+                session_start_time=session_start.astimezone(),
                 file_create_date=datetime.now().astimezone(),
                 session_id=session_id,
                 institution="Princeton",
