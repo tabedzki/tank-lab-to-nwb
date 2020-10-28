@@ -2,3 +2,4 @@ numpy
 notebook
 pynwb
 h5py
+isodate
