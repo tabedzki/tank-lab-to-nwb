@@ -81,19 +81,18 @@ class TowersPositionInterface(BaseDataInterface):
         if Path(mat_file).is_file():
             nwbfile.add_epoch_column('label', 'name of epoch')
 
-            n_epochs = len(matin['log']['block'])
             epoch_start_dts = [array_to_dt(x.start) for x in matin['log']['block']]
             epoch_durations = [timedelta(seconds=x.duration) for x in matin['log']['block']]
-            for j in range(n_epochs):
-                start = epoch_start_dts[j] - session_start_time
-                end = start + epoch_durations[j]
-                nwbfile.add_epoch(
-                    start_time=start.total_seconds(),
-                    stop_time=end.total_seconds(),
-                    label='Epoch'+str(j+1)
-                )
+            epoch_start_nwb = [(epoch_start_dt - session_start_time).total_seconds()
+                               for epoch_start_dt in epoch_start_dts]
+            epoch_end_nwb = [(epoch_start_dt - session_start_time + epoch_duration).total_seconds()
+                             for epoch_start_dt, epoch_duration in zip(epoch_start_dts, epoch_durations)]
+            for j, (start, end) in enumerate(zip(epoch_start_nwb, epoch_end_nwb)):
+                nwbfile.add_epoch(start_time=start, stop_time=end, label='Epoch'+str(j+1))
 
-            trial_starts = [trial.start for epoch in matin['log']['block'] for trial in epoch.trial]
+            trial_starts = [trial.start + epoch_start
+                            for epoch, epoch_start in zip(matin['log']['block'], epoch_start_nwb)
+                            for trial in epoch.trial]
             trial_durations = [trial.duration for epoch in matin['log']['block'] for trial in epoch.trial]
             trial_ends = [start_time + duration for start_time, duration in zip(trial_starts, trial_durations)]
             for k in range(len(trial_starts)):
