@@ -91,8 +91,8 @@ class TowersPositionInterface(BaseDataInterface):
             for j, (start, end) in enumerate(zip(epoch_start_nwb, epoch_end_nwb)):
                 nwbfile.add_epoch(start_time=start, stop_time=end, label='Epoch'+str(j+1))
 
-            trial_starts = [trial.start + epoch_start
-                            for epoch, epoch_start in zip(matin['log']['block'], epoch_start_nwb)
+            trial_starts = [trial.start + epoch_start_nwb[0]
+                            for epoch in matin['log']['block']
                             for trial in epoch.trial]
             trial_durations = [trial.duration for epoch in matin['log']['block'] for trial in epoch.trial]
             trial_ends = [start_time + duration for start_time, duration in zip(trial_starts, trial_durations)]
@@ -103,10 +103,10 @@ class TowersPositionInterface(BaseDataInterface):
             pos_obj = Position(name="Position")
             pos_timestamps = []
             pos_data = np.empty((0, 3))
-            for epoch, epoch_start in zip(matin['log']['block'], epoch_start_nwb):
+            for epoch in matin['log']['block']:
                 for trial in epoch.trial:
-                    trial_total_time = trial.start + epoch_start + trial.time
-                    trial_position = trial['position']
+                    trial_total_time = trial.start + epoch_start_nwb[0] + trial.time
+                    trial_position = trial.position
                     trial_truncated_time = trial_total_time[:trial_position.shape[0]]
                     pos_timestamps.extend(trial_truncated_time)
                     pos_data = np.concatenate([pos_data, trial_position], axis=0)
