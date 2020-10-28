@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 from dateutil.parser import parse as dateparse
 from isodate import duration_isoformat
-from nwb_conversion_tools import NWBConverter
+from nwb_conversion_tools import NWBConverter, SpikeGLXRecordingInterface
 
 from .towerspositiondatainterface import TowersPositionInterface
 from ..utils import convert_mat_file_to_dict
@@ -12,7 +12,7 @@ from ..utils import convert_mat_file_to_dict
 
 class TowersNWBConverter(NWBConverter):
     data_interface_classes = dict(
-        #            SpikeGLXRecording=SpikeGLXRecordingInterface,
+        SpikeGLXRecording=SpikeGLXRecordingInterface,
         TowersPosition=TowersPositionInterface,
     )
 
@@ -70,6 +70,7 @@ class TowersNWBConverter(NWBConverter):
             #         }
             #     }
             # },
+            SpikeGLXRecording=None,
             TowersPosition=dict()
         )
 
