@@ -8,6 +8,7 @@ from scipy.io import loadmat
 import os
 from datetime import datetime, timedelta
 from dateutil.parser import parse as dateparse
+from isodate import duration_isoformat
 
 from ..utils import convert_mat_file_to_dict
 
@@ -36,7 +37,7 @@ class TowersNWBConverter(NWBConverter):
         metadata = dict(
             NWBFile=dict(
                 identifier=session_id,
-                session_start_time=session_start.astimezone(),
+                session_start_time=session_start.astimezone().isoformat(),
                 file_create_date=datetime.now().astimezone(),
                 session_id=session_id,
                 institution="Princeton",
@@ -79,10 +80,11 @@ class TowersNWBConverter(NWBConverter):
             session_data = convert_mat_file_to_dict(mat_file_name=session_path)
             subject_data = session_data['log']['animal']
 
-            key_map = dict(name='subject_id', importAge='age', importWeight='weight')
+            key_map = dict(name='subject_id', importWeight='weight')
             [metadata['Subject'].update({key_map[k]: str(subject_data[k])}) for k in key_map if k in subject_data]
-            # TODO: adjust age string to proper NWB format
-            # metadata['Subject'].update(age=str(subject_data['importAge']))
+
+            age_in_iso_format = duration_isoformat(timedelta(weeks=subject_data['importAge']))
+            metadata['Subject'].update(age=age_in_iso_format)
         else:
             print(f"Warning: no subject file detected for session {session_path}!")
 
