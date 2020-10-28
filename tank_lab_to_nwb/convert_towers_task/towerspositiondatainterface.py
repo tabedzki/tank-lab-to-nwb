@@ -8,7 +8,7 @@ from nwb_conversion_tools.basedatainterface import BaseDataInterface
 from nwb_conversion_tools.utils import get_base_schema, get_schema_from_hdmf_class
 from pynwb import NWBFile
 from pynwb.behavior import SpatialSeries, Position
-from ..utils import check_module, convert_mat_file_to_dict, mat_obj_to_dict, array_to_dt
+from ..utils import check_module, convert_mat_file_to_dict, array_to_dt
 
 
 class TowersPositionInterface(BaseDataInterface):
@@ -91,8 +91,8 @@ class TowersPositionInterface(BaseDataInterface):
             for j, (start, end) in enumerate(zip(epoch_start_nwb, epoch_end_nwb)):
                 nwbfile.add_epoch(start_time=start, stop_time=end, label='Epoch'+str(j+1))
 
-            trial_starts = [trial.start + epoch_start
-                            for epoch, epoch_start in zip(matin['log']['block'], epoch_start_nwb)
+            trial_starts = [trial.start + epoch_start_nwb[0]
+                            for epoch in matin['log']['block']
                             for trial in epoch.trial]
             trial_durations = [trial.duration for epoch in matin['log']['block'] for trial in epoch.trial]
             trial_ends = [start_time + duration for start_time, duration in zip(trial_starts, trial_durations)]
@@ -101,25 +101,22 @@ class TowersPositionInterface(BaseDataInterface):
 
             # Processed position
             pos_obj = Position(name="Position")
-
-            pos_data = np.empty((0, 3))
             pos_timestamps = []
-            for block in matin['log']['block']:
-                block = mat_obj_to_dict(block)
-                for trial in block['trial']:
-                    trial = mat_obj_to_dict(trial)
-                    trial_absolute_time = trial['start'] + trial['time']
-                    trial_position = trial['position']
-                    trial_truncated_time = trial_absolute_time[:len(trial_position)]
+            pos_data = np.empty((0, 3))
+            for epoch in matin['log']['block']:
+                for trial in epoch.trial:
+                    trial_total_time = trial.start + epoch_start_nwb[0] + trial.time
+                    trial_position = trial.position
+                    trial_truncated_time = trial_total_time[:trial_position.shape[0]]
                     pos_timestamps.extend(trial_truncated_time)
                     pos_data = np.concatenate([pos_data, trial_position], axis=0)
-
-            spatial_series_object = SpatialSeries(
-                name="SpatialSeries",
-                data=H5DataIO(pos_data, compression="gzip"),
-                reference_frame="unknown",
-                resolution=np.nan,
-                timestamps=H5DataIO(pos_timestamps, compression="gzip")
+            pos_obj.add_spatial_series(
+                SpatialSeries(
+                    name="SpatialSeries",
+                    data=H5DataIO(pos_data, compression="gzip"),
+                    reference_frame="unknown",
+                    resolution=np.nan,
+                    timestamps=H5DataIO(pos_timestamps, compression="gzip")
+                )
             )
-            pos_obj.add_spatial_series(spatial_series_object)
             check_module(nwbfile, 'behavior', 'contains processed behavioral data').add_data_interface(pos_obj)
