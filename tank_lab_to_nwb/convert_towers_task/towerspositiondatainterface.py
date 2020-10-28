@@ -7,7 +7,7 @@ from hdmf.backends.hdf5.h5_utils import H5DataIO
 import numpy as np
 from pathlib import Path
 from datetime import timedelta
-from ..utils import check_module, date_array_to_dt, convert_mat_file_to_dict, mat_obj_to_dict
+from ..utils import check_module, convert_mat_file_to_dict, mat_obj_to_dict, array_to_dt
 
 
 class TowersPositionInterface(BaseDataInterface):
@@ -74,29 +74,22 @@ class TowersPositionInterface(BaseDataInterface):
         mat_file = session_path + ".mat"
         matin = convert_mat_file_to_dict(mat_file)
         # TODO: move this to get_metadata in main converter
-        session_start_time = date_array_to_dt(matin['log']['session'][0][0]['start'][0][0][0])
+        session_start_time = array_to_dt(matin['log']['session']['start'])
         # session_start_time = metadata_dict['session_start_time']
 
         # Intervals
         if Path(mat_file).is_file():
             nwbfile.add_epoch_column('label', 'name of epoch')
 
-            blocks = matin['log']['block']
-            epoch_start_fields = blocks[0][0]['start'][0]
-            n_epochs = len(epoch_start_fields)
-            epoch_start_dts = [date_array_to_dt(x[0]) for x in epoch_start_fields]
-            epoch_durationss = [timedelta(seconds=x[0][0]) for x in blocks[0][0]['duration'][0]]
-
-            epoch_windows = []
+            n_epochs = len(matin['log']['block'])
+            epoch_start_dts = [array_to_dt(x.start) for x in matin['log']['block']]
+            epoch_durations = [timedelta(seconds=x.duration) for x in matin['log']['block']]
             for j in range(n_epochs):
                 start = epoch_start_dts[j] - session_start_time
-                end = start + epoch_durationss[j]
-                epoch_windows.append([start.total_seconds(), end.total_seconds()])
+                end = start + epoch_durations[j]
+                nwbfile.add_epoch(start_time=start, stop_time=end, label='Epoch'+str(j))
 
-            for j, window in enumerate(epoch_windows):
-                nwbfile.add_epoch(start_time=window[0], stop_time=window[1], label='Epoch'+str(j))
-
-            trial_start_fields = []
+            trial_starts = [trial.start for epoch in matin['log']['block'] for trial in epoch.trial]
             trial_duration_fields = []
             n_trials = []
             for j in range(n_epochs):
@@ -133,6 +126,7 @@ class TowersPositionInterface(BaseDataInterface):
                 data=H5DataIO(pos_data, compression='gzip'),
                 reference_frame='unknown', conversion=conversion,
                 resolution=np.nan,
-                timestamps=H5DataIO(pos_timestamps, compression='gzip'))
+                timestamps=H5DataIO(pos_timestamps, compression='gzip')
+            )
             pos_obj.add_spatial_series(spatial_series_object)
             check_module(nwbfile, 'behavior', 'contains processed behavioral data').add_data_interface(pos_obj)
