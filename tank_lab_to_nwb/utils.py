@@ -1,7 +1,8 @@
 """Authors: Ben Dichter, Cody Baker."""
 import numpy as np
-from dateutil.parser import parse as dateparse
+from datetime import datetime
 from scipy.io import loadmat, matlab
+
 
 try:
     from typing import ArrayLike
@@ -75,19 +76,8 @@ def convert_mat_file_to_dict(mat_file_name):
     return data
 
 
-def date_array_to_dt(array):
-    """
-    Auxiliary function for converting the array of datetime information into datetime objects.
-
-    Parameters
-    ----------
-    array : array of floats of the form [Y,M,D,H,M,S].
-
-    Returns
-    -------
-    datetime
-
-    """
-    temp = [str(round(x)) for x in array[0:-1]]
-    date_text = temp[0] + "-" + temp[1] + "-" + temp[2] + "T" + temp[3] + ":" + temp[4] + ":" + str(array[-1])
-    return dateparse(date_text)
+def array_to_dt(array):
+    """Convert array of floats to datetime object."""
+    dt_input = [int(x) for x in array]
+    dt_input.append(round(np.mod(array[-1], 1) * 10**6))
+    return datetime(*dt_input)
