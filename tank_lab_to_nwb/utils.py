@@ -1,13 +1,15 @@
 """Authors: Ben Dichter, Cody Baker."""
 import numpy as np
-from scipy.io import loadmat, matlab
 from datetime import datetime
+from scipy.io import loadmat, matlab
+
 
 try:
     from typing import ArrayLike
 except ImportError:
     from numpy import ndarray
     from typing import Union, Sequence
+
     # adapted from numpy typing
     ArrayLike = Union[bool, int, float, complex, list, ndarray, Sequence]
 

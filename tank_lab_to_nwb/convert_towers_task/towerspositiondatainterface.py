@@ -8,7 +8,6 @@ from nwb_conversion_tools.basedatainterface import BaseDataInterface
 from nwb_conversion_tools.utils import get_base_schema, get_schema_from_hdmf_class
 from pynwb import NWBFile
 from pynwb.behavior import SpatialSeries, Position
-
 from ..utils import check_module, convert_mat_file_to_dict, mat_obj_to_dict, array_to_dt
 
 

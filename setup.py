@@ -15,7 +15,7 @@ setup(
     description='NWB conversion scripts and tutorials.',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    author='Luiz Tauffer, Cody Baker and Ben Dichter',
+    author='Luiz Tauffer, Cody Baker Szonja Weigl, and Ben Dichter',
     email='ben.dichter@gmail.com',
     packages=find_packages(),
     include_package_data=True,
