@@ -6,9 +6,8 @@ from pynwb.behavior import SpatialSeries, Position
 from hdmf.backends.hdf5.h5_utils import H5DataIO
 import numpy as np
 from pathlib import Path
-from scipy.io import loadmat
 from datetime import timedelta
-from ..utils import check_module, date_array_to_dt
+from ..utils import check_module, date_array_to_dt, convert_mat_file_to_dict, mat_obj_to_dict
 
 
 class TowersPositionInterface(BaseDataInterface):
@@ -73,7 +72,7 @@ class TowersPositionInterface(BaseDataInterface):
         """
         session_path = self.input_args['folder_path']
         mat_file = session_path + ".mat"
-        matin = loadmat(mat_file)
+        matin = convert_mat_file_to_dict(mat_file)
         # TODO: move this to get_metadata in main converter
         session_start_time = date_array_to_dt(matin['log']['session'][0][0]['start'][0][0][0])
         # session_start_time = metadata_dict['session_start_time']
@@ -115,15 +114,25 @@ class TowersPositionInterface(BaseDataInterface):
             # Processed position
             pos_obj = Position(name='_position')
 
-            pos_data = matin #[...]
-            pos_timestamps = matin #[...]
-            conversion = 1 # need to change?
+            pos_data = np.empty((0, 3))
+            pos_timestamps = []
+            for block in blocks:
+                block = mat_obj_to_dict(block)
+                for trial in block['trial']:
+                    trial = mat_obj_to_dict(trial)
+                    trial_absolute_time = trial['start'] + trial['time']
+                    trial_position = trial['position']
+                    trial_truncated_time = trial_absolute_time[:len(trial_position)]
+                    pos_timestamps.extend(trial_truncated_time)
+                    pos_data = np.concatenate([pos_data, trial_position], axis=0)
 
-            # spatial_series_object = SpatialSeries(
-            #     name='_{}_spatial_series',
-            #     data=H5DataIO(pos_data, compression='gzip'),
-            #     reference_frame='unknown', conversion=conversion,
-            #     resolution=np.nan,
-            #     timestamps=H5DataIO(pos_timestamps, compression='gzip'))
-            # pos_obj.add_spatial_series(spatial_series_object)
-            # check_module(nwbfile, 'behavior', 'contains processed behavioral data').add_data_interface(pos_obj)
+            conversion = 1.0  # need to change?
+
+            spatial_series_object = SpatialSeries(
+                name='_{}_spatial_series',
+                data=H5DataIO(pos_data, compression='gzip'),
+                reference_frame='unknown', conversion=conversion,
+                resolution=np.nan,
+                timestamps=H5DataIO(pos_timestamps, compression='gzip'))
+            pos_obj.add_spatial_series(spatial_series_object)
+            check_module(nwbfile, 'behavior', 'contains processed behavioral data').add_data_interface(pos_obj)
