@@ -101,7 +101,7 @@ class TowersPositionInterface(BaseDataInterface):
                 nwbfile.add_trial(start_time=trial_starts[k], stop_time=trial_ends[k])
 
             # Processed position
-            pos_obj = Position(name="PositionSeries")
+            pos_obj = Position(name="Position")
 
             pos_data = np.empty((0, 3))
             pos_timestamps = []
