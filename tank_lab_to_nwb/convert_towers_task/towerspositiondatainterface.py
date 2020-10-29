@@ -1,4 +1,4 @@
-"""Authors: Cody Baker and Ben Dichter."""
+"""Authors: Cody Baker Szonja Weigl and Ben Dichter."""
 from datetime import timedelta
 from pathlib import Path
 
