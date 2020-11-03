@@ -11,7 +11,7 @@ from pynwb.behavior import SpatialSeries, Position
 from ..utils import check_module, convert_mat_file_to_dict, array_to_dt
 
 
-class TowersPositionInterface(BaseDataInterface):
+class VirmenDataInterface(BaseDataInterface):
     """Description here."""
 
     @classmethod
@@ -59,7 +59,7 @@ class TowersPositionInterface(BaseDataInterface):
 
     def convert_data(self, nwbfile: NWBFile, metadata_dict: dict, stub_test: bool = False):
         """
-        Primary conversion function for the custom tank lab positional interface.
+        Primary conversion function for the custom tank lab behavioral interface.
 
         Parameters
         ----------
