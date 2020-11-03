@@ -31,7 +31,7 @@ The code currently supports read in of the SpikeGLX data and converts it via the
 * log.block(j).trial(k).time is a vector of timestamps for the positional recording; unfortunately, these do appear to be irregularly sampled and so must be specified in the NWBFile. Also, they always begin indexed at zero with respect to the *trial* start time (see "Intervals" below to learn how to access this)
 * log.block(j).trial(k).position is a 3-d vector of length *less* than log.block(j).trial(k).time; the positional recording stops when the subject completes the maze.
 
-[We will have to decide if we want to pad the position series with None or Nan to match the dimension of the timestamps. Client indicated they might want this, but isn't it with respect to NWNWidgets? Couldn't the Widget itself display based on epoch/trial partition, with option to fill with Nan? Technically speaking the current NWBFile has all of the actual information to enable the retrieval of all information they would want to compare, padding certain values with Nan would only needlessly increase the size of the NWBFile.]
+{Add Nan padding to SpatialSeries to avoid NwbWidget interpolation; with compression, they should not take much space.}
   
   
 ### Intervals
@@ -45,4 +45,4 @@ The code currently supports read in of the SpikeGLX data and converts it via the
 
 Since trials are concatenated in NWBFiles distinct from but in line with the actual epochs, the trial intervals will have to be pulled and assembled in order.
 
-[Epoch names or labels: should they reflect maze ID? log.block.mazeID are not all the same]
+{Include Epoch and Trial column information such as MazeID and cue info}
