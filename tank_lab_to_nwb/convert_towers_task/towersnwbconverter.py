@@ -6,14 +6,14 @@ from dateutil.parser import parse as dateparse
 from isodate import duration_isoformat
 from nwb_conversion_tools import NWBConverter, SpikeGLXRecordingInterface
 
-from .towerspositiondatainterface import TowersPositionInterface
+from .towersbehaviordatainterface import VirmenDataInterface
 from ..utils import convert_mat_file_to_dict
 
 
 class TowersNWBConverter(NWBConverter):
     data_interface_classes = dict(
         SpikeGLXRecording=SpikeGLXRecordingInterface,
-        TowersPosition=TowersPositionInterface,
+        VirmenData=VirmenDataInterface,
     )
 
     def __init__(self, **input_args):
@@ -24,7 +24,7 @@ class TowersNWBConverter(NWBConverter):
         return self._recording_type
 
     def get_metadata(self):
-        session_path = self.data_interface_objects['TowersPosition'].input_args['folder_path']
+        session_path = self.data_interface_objects['VirmenData'].input_args['folder_path']
         subject_path, session_id = os.path.split(session_path)
 
         session_name = os.path.splitext(session_id)[0]
@@ -71,7 +71,7 @@ class TowersNWBConverter(NWBConverter):
             #     }
             # },
             SpikeGLXRecording=None,
-            TowersPosition=dict()
+            VirmenData=dict()
         )
 
         if os.path.isfile(session_path + ".mat"):

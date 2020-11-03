@@ -32,7 +32,7 @@ def run_tower_conv(session, nwbfile_path):
                     file_path="D:/Neuropixels/Neuropixels/A256_bank1_2020_09_30/"
                     "A256_bank1_2020_09_30_g0/A256_bank1_2020_09_30_g0_t0.imec0.ap.bin"
                 ),
-                TowersPosition=dict(folder_path=session)
+                VirmenData=dict(folder_path=session)
             )
 
             converter = TowersNWBConverter(**input_args)
