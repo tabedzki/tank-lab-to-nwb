@@ -6,7 +6,7 @@ import numpy as np
 from hdmf.backends.hdf5.h5_utils import H5DataIO
 from nwb_conversion_tools.basedatainterface import BaseDataInterface
 from nwb_conversion_tools.utils import get_base_schema, get_schema_from_hdmf_class
-from pynwb import NWBFile
+from pynwb import NWBFile, TimeSeries
 from pynwb.behavior import SpatialSeries, Position
 from ..utils import check_module, convert_mat_file_to_dict, array_to_dt
 
@@ -101,16 +101,15 @@ class TowersPositionInterface(BaseDataInterface):
 
             # Processed position, velocity
             pos_obj = Position(name="Position")
-            velocity_obj = Position(name="Velocity")
 
             timestamps = []
             pos_data = np.empty((0, 3))
-            velocity_data = np.empty_like(pos_data)
+            velocity_data = np.empty((0, 2))
             for epoch in matin['log']['block']:
                 for trial in epoch.trial:
                     trial_total_time = trial.start + epoch_start_nwb[0] + trial.time
                     trial_position = trial.position
-                    trial_velocity = trial.velocity
+                    trial_velocity = trial.velocity[:, :-1]
                     trial_truncated_time = trial_total_time[:trial_position.shape[0]]
                     timestamps.extend(trial_truncated_time)
                     pos_data = np.concatenate([pos_data, trial_position], axis=0)
@@ -124,15 +123,12 @@ class TowersPositionInterface(BaseDataInterface):
                     timestamps=H5DataIO(timestamps, compression="gzip")
                 )
             )
-            velocity_obj.add_spatial_series(
-                SpatialSeries(
-                    name="SpatialSeries",
-                    data=H5DataIO(velocity_data, compression="gzip"),
-                    reference_frame="unknown",
-                    resolution=np.nan,
-                    timestamps=H5DataIO(timestamps, compression="gzip")
-                )
-            )
+            velocity_ts = TimeSeries(name='Velocity',
+                                     data=H5DataIO(velocity_data, compression="gzip"),
+                                     unit='cm/s',
+                                     resolution=np.nan,
+                                     timestamps=H5DataIO(timestamps, compression="gzip"))
+
             behavioral_processing_module = check_module(nwbfile, 'behavior', 'contains processed behavioral data')
             behavioral_processing_module.add_data_interface(pos_obj)
-            behavioral_processing_module.add_data_interface(velocity_obj)
+            behavioral_processing_module.add_data_interface(velocity_ts)
