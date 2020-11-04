@@ -103,17 +103,18 @@ class VirmenDataInterface(BaseDataInterface):
             pos_obj = Position(name="Position")
 
             timestamps = []
-            pos_data = np.empty((0, 3))
-            velocity_data = np.empty((0, 2))
+            pos_data = np.empty((0, 2))
+            velocity_data = np.empty_like(pos_data)
             for epoch in matin['log']['block']:
                 for trial in epoch.trial:
                     trial_total_time = trial.start + epoch_start_nwb[0] + trial.time
-                    trial_position = trial.position
+                    timestamps.extend(trial_total_time)
+
+                    padding = np.full((trial.time.shape[0] - trial.position.shape[0], 2), np.nan)
+                    trial_position = trial.position[:, :-1]
                     trial_velocity = trial.velocity[:, :-1]
-                    trial_truncated_time = trial_total_time[:trial_position.shape[0]]
-                    timestamps.extend(trial_truncated_time)
-                    pos_data = np.concatenate([pos_data, trial_position], axis=0)
-                    velocity_data = np.concatenate([velocity_data, trial_velocity], axis=0)
+                    pos_data = np.concatenate([pos_data, trial_position, padding], axis=0)
+                    velocity_data = np.concatenate([velocity_data, trial_velocity, padding], axis=0)
             pos_obj.add_spatial_series(
                 SpatialSeries(
                     name="SpatialSeries",
