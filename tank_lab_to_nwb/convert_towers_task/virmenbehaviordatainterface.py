@@ -33,7 +33,7 @@ class VirmenDataInterface(BaseDataInterface):
         return dict(
             required=['folder_path'],
             properties=dict(
-                folder_path=dict(type='string')
+                file_path=dict(type='string')
             )
         )
 
@@ -71,8 +71,7 @@ class VirmenDataInterface(BaseDataInterface):
             DESCRIPTION. The default is False.
 
         """
-        session_path = self.input_args['folder_path']
-        mat_file = session_path + ".mat"
+        mat_file = self.input_args['file_path']
         matin = convert_mat_file_to_dict(mat_file)
         # TODO: move this to get_metadata in main converter
         session_start_time = array_to_dt(matin['log']['session']['start'])

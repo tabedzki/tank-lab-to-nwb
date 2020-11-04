@@ -14,10 +14,10 @@ base_path = "D:/Neuropixels/TowersTask"
 # Manual list of selected sessions that cause problems with the general functionality
 exlude_sessions = []
 
-session_strings = ["PoissonBlocksReboot_cohort1_VRTrain6_E75_T_20181105"]
+virmen_strings = ["PoissonBlocksReboot_cohort1_VRTrain6_E75_T_20181105.mat"]
 nwbfile_paths = []
-for j, session in enumerate(session_strings):
-    session_strings[j] = os.path.join(base_path, session_strings[j])
+for j, session in enumerate(virmen_strings):
+    virmen_strings[j] = os.path.join(base_path, virmen_strings[j])
     nwbfile_paths.append(os.path.join(base_path, session) + "_local_stub.nwb")
 
 

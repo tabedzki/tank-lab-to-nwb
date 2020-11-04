@@ -6,7 +6,7 @@ from dateutil.parser import parse as dateparse
 from isodate import duration_isoformat
 from nwb_conversion_tools import NWBConverter, SpikeGLXRecordingInterface
 
-from .towersbehaviordatainterface import VirmenDataInterface
+from .virmenbehaviordatainterface import VirmenDataInterface
 from ..utils import convert_mat_file_to_dict
 
 
