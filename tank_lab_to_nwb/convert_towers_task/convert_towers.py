@@ -13,8 +13,7 @@ if base_path.is_dir():
     if not nwbfile_path.is_file():
         input_args = dict(
             SpikeGLXRecording=dict(
-                file_path=spikeglx_file_path,
-                sync_with_ttl=True
+                file_path=spikeglx_file_path
             ),
             VirmenData=dict(
                 file_path=virmen_file_path
@@ -28,4 +27,9 @@ if base_path.is_dir():
         metadata['NWBFile'].update(session_description="")
         metadata['Subject'].update(species="Mus musculus")
 
-        converter.run_conversion(nwbfile_path=str(nwbfile_path.absolute()), metadata_dict=metadata, stub_test=True)
+        converter.run_conversion(
+            nwbfile_path=str(nwbfile_path.absolute()),
+            metadata_dict=metadata,
+            stub_test=True,
+            sync_with_ttl=True
+        )
