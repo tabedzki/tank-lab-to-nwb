@@ -21,8 +21,7 @@ class TowersNWBConverter(NWBConverter):
         file_path = Path(self.data_interface_objects['VirmenData'].input_args['file_path'])
         session_id = file_path.stem
 
-        session_name = os.path.splitext(session_id)[0]
-        date_text = [name for name in session_name.split('_') if name.isdigit()][0]
+        date_text = [id_part for id_part in session_id.split('_') if id_part.isdigit()][0]
         session_start = dateparse(date_text, yearfirst=True)
 
         metadata = dict(
