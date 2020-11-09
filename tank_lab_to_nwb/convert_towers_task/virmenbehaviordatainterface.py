@@ -90,6 +90,19 @@ class VirmenDataInterface(BaseDataInterface):
             for j, (start, end) in enumerate(zip(epoch_start_nwb, epoch_end_nwb)):
                 nwbfile.add_epoch(start_time=start, stop_time=end, label='Epoch'+str(j+1))
 
+            epoch_maze_ids = [epoch.mazeID for epoch in matin['log']['block']]
+            epoch_reward_mil = [epoch.rewardMiL for epoch in matin['log']['block']]
+            epoch_stimulus_config = [epoch.stimulusConfig for epoch in matin['log']['block']]
+            nwbfile.add_epoch_column(name='maze_id',
+                                     description='identifier of the ViRMEn maze',
+                                     data=epoch_maze_ids)
+            nwbfile.add_epoch_column(name='reward_ml',
+                                     description='reward in ml',
+                                     data=epoch_reward_mil)
+            nwbfile.add_epoch_column(name='stimulus_config',
+                                     description='stimulus configuration number',
+                                     data=epoch_stimulus_config)
+
             trial_starts = [trial.start + epoch_start_nwb[0]
                             for epoch in matin['log']['block']
                             for trial in epoch.trial]
