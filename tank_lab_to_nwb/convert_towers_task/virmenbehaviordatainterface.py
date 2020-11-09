@@ -113,31 +113,17 @@ class VirmenDataInterface(BaseDataInterface):
 
             trial_excess_travel = [trial.excessTravel for epoch in matin['log']['block']
                                    for trial in epoch.trial]
-            trial_cue_onsets = [trial.cueOnset for epoch in matin['log']['block'] for trial in
-                                epoch.trial]
-            trial_cue_offsets = [trial.cueOffset for epoch in matin['log']['block'] for trial in
-                                 epoch.trial]
-            trial_cue_positions = [trial.cuePos for epoch in matin['log']['block'] for trial in
-                                   epoch.trial]
             nwbfile.add_trial_column(name='excess_travel',
                                      description='total distance traveled during the trial '
                                                  'normalized to the length of the maze',
                                      data=trial_excess_travel)
-            nwbfile.add_trial_column(name='cue_onset',
-                                     description='iteration number of ViRMEn when cues are switched on',
-                                     data=trial_cue_onsets)
-            nwbfile.add_trial_column(name='cue_offset',
-                                     description='iteration number of ViRMEn when cues are switched off',
-                                     data=trial_cue_offsets)
-            nwbfile.add_trial_column(name='cue_position',
-                                     description='position of the cues in cm',
-                                     data=trial_cue_positions)
             # Processed position, velocity
             pos_obj = Position(name="Position")
 
             timestamps = []
             pos_data = np.empty((0, 2))
             velocity_data = np.empty_like(pos_data)
+            trial_cue_orientation = []
             for epoch in matin['log']['block']:
                 for trial in epoch.trial:
                     trial_total_time = trial.start + epoch_start_nwb[0] + trial.time
@@ -148,6 +134,12 @@ class VirmenDataInterface(BaseDataInterface):
                     trial_velocity = trial.velocity[:, :-1]
                     pos_data = np.concatenate([pos_data, trial_position, padding], axis=0)
                     velocity_data = np.concatenate([velocity_data, trial_velocity, padding], axis=0)
+                    if (trial.cueCombo[0] == 1).all():
+                        trial_cue_orientation.append('left')
+                    elif (trial.cueCombo[1] == 1).all():
+                        trial_cue_orientation.append('right')
+                    else:
+                        trial_cue_orientation.append('both')
             pos_obj.add_spatial_series(
                 SpatialSeries(
                     name="SpatialSeries",
@@ -162,7 +154,10 @@ class VirmenDataInterface(BaseDataInterface):
                                      unit='cm/s',
                                      resolution=np.nan,
                                      timestamps=H5DataIO(timestamps, compression="gzip"))
-
+            nwbfile.add_trial_column(name='cue_orientation',
+                                     description='orientation of the cues depending on '
+                                                 'which side it was presented',
+                                     data=trial_cue_orientation)
             behavioral_processing_module = check_module(nwbfile, 'behavior', 'contains processed behavioral data')
             behavioral_processing_module.add_data_interface(pos_obj)
             behavioral_processing_module.add_data_interface(velocity_ts)
