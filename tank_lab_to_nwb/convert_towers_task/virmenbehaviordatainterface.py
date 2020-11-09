@@ -111,6 +111,13 @@ class VirmenDataInterface(BaseDataInterface):
             for k in range(len(trial_starts)):
                 nwbfile.add_trial(start_time=trial_starts[k], stop_time=trial_ends[k])
 
+            trial_excess_travel = [trial.excessTravel for epoch in matin['log']['block']
+                                   for trial in epoch.trial]
+            nwbfile.add_trial_column(name='excess_travel',
+                                     description='total distance traveled during the trial '
+                                                 'normalized to the length of the maze',
+                                     data=trial_excess_travel)
+
             # Processed position, velocity
             pos_obj = Position(name="Position")
 
