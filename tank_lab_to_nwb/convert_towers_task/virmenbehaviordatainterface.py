@@ -113,11 +113,25 @@ class VirmenDataInterface(BaseDataInterface):
 
             trial_excess_travel = [trial.excessTravel for epoch in matin['log']['block']
                                    for trial in epoch.trial]
+            trial_cue_onsets = [trial.cueOnset for epoch in matin['log']['block'] for trial in
+                                epoch.trial]
+            trial_cue_offsets = [trial.cueOffset for epoch in matin['log']['block'] for trial in
+                                 epoch.trial]
+            trial_cue_positions = [trial.cuePos for epoch in matin['log']['block'] for trial in
+                                   epoch.trial]
             nwbfile.add_trial_column(name='excess_travel',
                                      description='total distance traveled during the trial '
                                                  'normalized to the length of the maze',
                                      data=trial_excess_travel)
-
+            nwbfile.add_trial_column(name='cue_onset',
+                                     description='iteration number of ViRMEn when cues are switched on',
+                                     data=trial_cue_onsets)
+            nwbfile.add_trial_column(name='cue_offset',
+                                     description='iteration number of ViRMEn when cues are switched off',
+                                     data=trial_cue_offsets)
+            nwbfile.add_trial_column(name='cue_position',
+                                     description='position of the cues in cm',
+                                     data=trial_cue_positions)
             # Processed position, velocity
             pos_obj = Position(name="Position")
 
