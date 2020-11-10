@@ -7,7 +7,7 @@ from hdmf.backends.hdf5.h5_utils import H5DataIO
 from nwb_conversion_tools.basedatainterface import BaseDataInterface
 from nwb_conversion_tools.utils import get_base_schema, get_schema_from_hdmf_class
 from pynwb import NWBFile, TimeSeries
-from pynwb.behavior import SpatialSeries, Position
+from pynwb.behavior import SpatialSeries, Position, CompassDirection
 from ..utils import check_module, convert_mat_file_to_dict, array_to_dt
 
 
@@ -117,8 +117,9 @@ class VirmenDataInterface(BaseDataInterface):
                                      description='total distance traveled during the trial '
                                                  'normalized to the length of the maze',
                                      data=trial_excess_travel)
-            # Processed position, velocity
+            # Processed position, velocity, viewAngle
             pos_obj = Position(name="Position")
+            view_angle_obj = CompassDirection(name='ViewAngle')
 
             timestamps = []
             pos_data = np.empty((0, 2))
@@ -162,12 +163,16 @@ class VirmenDataInterface(BaseDataInterface):
                                      description='orientation of the cues depending on '
                                                  'which side it was presented',
                                      data=trial_cue_orientation)
-            view_angle_ts = TimeSeries(name='ViewAngle',
-                                       data=H5DataIO(view_angle_data, compression="gzip"),
-                                       unit='rad',
-                                       resolution=np.nan,
-                                       timestamps=H5DataIO(timestamps, compression="gzip"))
+            view_angle_obj.add_spatial_series(
+                SpatialSeries(
+                    name="SpatialSeries",
+                    data=H5DataIO(view_angle_data, compression="gzip"),
+                    reference_frame="unknown",
+                    resolution=np.nan,
+                    timestamps=H5DataIO(timestamps, compression="gzip")
+                )
+            )
             behavioral_processing_module = check_module(nwbfile, 'behavior', 'contains processed behavioral data')
             behavioral_processing_module.add_data_interface(pos_obj)
             behavioral_processing_module.add_data_interface(velocity_ts)
-            behavioral_processing_module.add_data_interface(view_angle_ts)
+            behavioral_processing_module.add_data_interface(view_angle_obj)
