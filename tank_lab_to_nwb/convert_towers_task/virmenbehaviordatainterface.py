@@ -90,6 +90,19 @@ class VirmenDataInterface(BaseDataInterface):
             for j, (start, end) in enumerate(zip(epoch_start_nwb, epoch_end_nwb)):
                 nwbfile.add_epoch(start_time=start, stop_time=end, label='Epoch'+str(j+1))
 
+            epoch_maze_ids = [epoch.mazeID for epoch in matin['log']['block']]
+            epoch_reward_mil = [epoch.rewardMiL for epoch in matin['log']['block']]
+            epoch_stimulus_config = [epoch.stimulusConfig for epoch in matin['log']['block']]
+            nwbfile.add_epoch_column(name='maze_id',
+                                     description='identifier of the ViRMEn maze',
+                                     data=epoch_maze_ids)
+            nwbfile.add_epoch_column(name='reward_ml',
+                                     description='reward in ml',
+                                     data=epoch_reward_mil)
+            nwbfile.add_epoch_column(name='stimulus_config',
+                                     description='stimulus configuration number',
+                                     data=epoch_stimulus_config)
+
             trial_starts = [trial.start + epoch_start_nwb[0]
                             for epoch in matin['log']['block']
                             for trial in epoch.trial]
@@ -98,12 +111,19 @@ class VirmenDataInterface(BaseDataInterface):
             for k in range(len(trial_starts)):
                 nwbfile.add_trial(start_time=trial_starts[k], stop_time=trial_ends[k])
 
+            trial_excess_travel = [trial.excessTravel for epoch in matin['log']['block']
+                                   for trial in epoch.trial]
+            nwbfile.add_trial_column(name='excess_travel',
+                                     description='total distance traveled during the trial '
+                                                 'normalized to the length of the maze',
+                                     data=trial_excess_travel)
             # Processed position, velocity
             pos_obj = Position(name="Position")
 
             timestamps = []
             pos_data = np.empty((0, 2))
             velocity_data = np.empty_like(pos_data)
+            trial_cue_orientation = []
             for epoch in matin['log']['block']:
                 for trial in epoch.trial:
                     trial_total_time = trial.start + epoch_start_nwb[0] + trial.time
@@ -114,6 +134,12 @@ class VirmenDataInterface(BaseDataInterface):
                     trial_velocity = trial.velocity[:, :-1]
                     pos_data = np.concatenate([pos_data, trial_position, padding], axis=0)
                     velocity_data = np.concatenate([velocity_data, trial_velocity, padding], axis=0)
+                    if (trial.cueCombo[0] == 1).all():
+                        trial_cue_orientation.append('left')
+                    elif (trial.cueCombo[1] == 1).all():
+                        trial_cue_orientation.append('right')
+                    else:
+                        trial_cue_orientation.append('both')
             pos_obj.add_spatial_series(
                 SpatialSeries(
                     name="SpatialSeries",
@@ -128,7 +154,10 @@ class VirmenDataInterface(BaseDataInterface):
                                      unit='cm/s',
                                      resolution=np.nan,
                                      timestamps=H5DataIO(timestamps, compression="gzip"))
-
+            nwbfile.add_trial_column(name='cue_orientation',
+                                     description='orientation of the cues depending on '
+                                                 'which side it was presented',
+                                     data=trial_cue_orientation)
             behavioral_processing_module = check_module(nwbfile, 'behavior', 'contains processed behavioral data')
             behavioral_processing_module.add_data_interface(pos_obj)
             behavioral_processing_module.add_data_interface(velocity_ts)
