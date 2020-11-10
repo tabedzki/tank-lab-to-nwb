@@ -58,7 +58,7 @@ class VirmenDataInterface(BaseDataInterface):
 
         return metadata_schema
 
-    def convert_data(self, nwbfile: NWBFile, metadata_dict: dict, stub_test: bool = False, **conversion_options):
+    def convert_data(self, nwbfile: NWBFile, metadata_dict: dict, stub_test: bool = False):
         """
         Primary conversion function for the custom tank lab behavioral interface.
 
