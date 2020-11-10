@@ -1,5 +1,4 @@
 """Authors: Cody Baker and Ben Dichter."""
-import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -29,24 +28,27 @@ class TowersNWBConverter(NWBConverter):
                 identifier=session_id,
                 session_start_time=session_start.astimezone(),
                 file_create_date=datetime.now().astimezone(),
+                session_description="no description",
                 session_id=session_id,
                 institution="Princeton",
                 lab="Tank"
             ),
-            Subject=dict(),
-            SpikeGLXRecording=None,
-            VirmenData=dict()
+            Subject=dict(
+                species="Mus musculus"
+            ),
         )
 
         if file_path.is_file():
             session_data = convert_mat_file_to_dict(mat_file_name=file_path)
             subject_data = session_data['log']['animal']
-
-            key_map = dict(name='subject_id', importWeight='weight')
-            [metadata['Subject'].update({key_map[k]: str(subject_data[k])}) for k in key_map if k in subject_data]
-
             age_in_iso_format = duration_isoformat(timedelta(weeks=subject_data['importAge']))
-            metadata['Subject'].update(age=age_in_iso_format)
+
+            metadata['Subject'].update(
+                subject_id=subject_data['name'],
+                weight=subject_data['importWeight'],
+                age=age_in_iso_format
+            )
+
         else:
             print(f"Warning: no subject file detected for session {session_id}!")
 

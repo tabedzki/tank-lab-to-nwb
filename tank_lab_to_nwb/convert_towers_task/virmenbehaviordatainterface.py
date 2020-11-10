@@ -8,6 +8,7 @@ from nwb_conversion_tools.basedatainterface import BaseDataInterface
 from nwb_conversion_tools.utils import get_base_schema, get_schema_from_hdmf_class
 from pynwb import NWBFile, TimeSeries
 from pynwb.behavior import SpatialSeries, Position
+
 from ..utils import check_module, convert_mat_file_to_dict, array_to_dt
 
 
@@ -88,7 +89,7 @@ class VirmenDataInterface(BaseDataInterface):
             epoch_end_nwb = [(epoch_start_dt - session_start_time + epoch_duration).total_seconds()
                              for epoch_start_dt, epoch_duration in zip(epoch_start_dts, epoch_durations)]
             for j, (start, end) in enumerate(zip(epoch_start_nwb, epoch_end_nwb)):
-                nwbfile.add_epoch(start_time=start, stop_time=end, label='Epoch'+str(j+1))
+                nwbfile.add_epoch(start_time=start, stop_time=end, label='Epoch' + str(j + 1))
 
             trial_starts = [trial.start + epoch_start_nwb[0]
                             for epoch in matin['log']['block']
