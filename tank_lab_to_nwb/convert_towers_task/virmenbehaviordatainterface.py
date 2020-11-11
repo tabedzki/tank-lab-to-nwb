@@ -150,6 +150,7 @@ class VirmenDataInterface(BaseDataInterface):
                     name="SpatialSeries",
                     data=H5DataIO(pos_data, compression="gzip"),
                     reference_frame="unknown",
+                    conversion=0.01,
                     resolution=np.nan,
                     timestamps=H5DataIO(timestamps, compression="gzip")
                 )
