@@ -2,6 +2,7 @@
 import numpy as np
 from datetime import datetime
 from scipy.io import loadmat, matlab
+from collections import Iterable
 
 
 try:
@@ -81,3 +82,20 @@ def array_to_dt(array):
     dt_input = [int(x) for x in array]
     dt_input.append(round(np.mod(array[-1], 1) * 10**6))
     return datetime(*dt_input)
+
+
+def create_indexed_array(ndarray):
+    """Creates an indexed array from an irregular array of arrays.
+    Returns the flat array and its indices."""
+    flat_array = []
+    array_indices = []
+    for array in ndarray:
+        if isinstance(array, Iterable):
+            flat_array.extend(array)
+            array_indices.append(len(array))
+        else:
+            flat_array.append(array)
+            array_indices.append(1)
+    array_indices = np.cumsum(array_indices)
+
+    return flat_array, array_indices
