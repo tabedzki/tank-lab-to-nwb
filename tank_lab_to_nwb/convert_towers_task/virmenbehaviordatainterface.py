@@ -4,11 +4,12 @@ from pathlib import Path
 
 import numpy as np
 from hdmf.backends.hdf5.h5_utils import H5DataIO
+from hdmf.common import DynamicTable
 from nwb_conversion_tools.basedatainterface import BaseDataInterface
 from nwb_conversion_tools.utils import get_base_schema, get_schema_from_hdmf_class
 from pynwb import NWBFile, TimeSeries
 from pynwb.behavior import SpatialSeries, Position, CompassDirection
-from ..utils import check_module, convert_mat_file_to_dict, array_to_dt
+from ..utils import check_module, convert_mat_file_to_dict, array_to_dt, create_indexed_array
 
 
 class VirmenDataInterface(BaseDataInterface):
@@ -120,6 +121,44 @@ class VirmenDataInterface(BaseDataInterface):
             # Processed position, velocity, viewAngle
             pos_obj = Position(name="Position")
             view_angle_obj = CompassDirection(name='ViewAngle')
+
+            left_cue_onsets = [trial.cueOnset[0] for epoch in matin['log']['block'] for trial in
+                               epoch.trial if np.any(trial.cueOnset[0])]
+            left_cue_offsets = [trial.cueOffset[0] for epoch in matin['log']['block'] for trial in
+                                epoch.trial if np.any(trial.cueOffset[0])]
+            left_cue_positions = [trial.cuePos[0] for epoch in matin['log']['block'] for trial in
+                                  epoch.trial if np.any(trial.cuePos[0])]
+
+            left_cue_onset_data, left_cue_data_indices = create_indexed_array(left_cue_onsets)
+            left_cue_offset_data, _ = create_indexed_array(left_cue_offsets)
+            left_cue_positions_data, _ = create_indexed_array(left_cue_positions)
+
+            left_cue_table = DynamicTable(
+                name='Left cue table',
+                description='left cue information',
+                id=left_cue_data_indices
+            )
+
+            left_cue_table.add_column(
+                name='left_cue_onset',
+                description='iteration numbers of ViRMEn when left cues were switched on',
+                data=left_cue_onset_data,
+                index=left_cue_data_indices,
+            )
+
+            left_cue_table.add_column(
+                name='left_cue_offset',
+                description='iteration numbers of ViRMEn when left cues were switched off',
+                data=left_cue_offset_data,
+                index=left_cue_data_indices,
+            )
+
+            left_cue_table.add_column(
+                name='left_cue_position',
+                description='position of the left cues',
+                data=left_cue_positions_data,
+                index=left_cue_data_indices,
+            )
 
             timestamps = []
             pos_data = np.empty((0, 2))
