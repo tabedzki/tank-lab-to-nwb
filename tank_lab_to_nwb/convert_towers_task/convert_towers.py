@@ -13,7 +13,8 @@ if base_path.is_dir():
     if not nwbfile_path.is_file():
         input_args = dict(
             SpikeGLXRecording=dict(
-                file_path=spikeglx_file_path
+                file_path=spikeglx_file_path,
+                dtype="int16"
             ),
             VirmenData=dict(
                 file_path=virmen_file_path
@@ -22,12 +23,8 @@ if base_path.is_dir():
 
         converter = TowersNWBConverter(**input_args)
         metadata = converter.get_metadata()
-
-        # Session specific metadata
-
         converter.run_conversion(
             nwbfile_path=str(nwbfile_path.absolute()),
             metadata_dict=metadata,
-            stub_test=True,
-            sync_with_ttl=True
+            stub_test=True
         )

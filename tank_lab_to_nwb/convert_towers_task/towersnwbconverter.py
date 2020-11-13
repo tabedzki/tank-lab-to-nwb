@@ -17,13 +17,13 @@ class TowersNWBConverter(NWBConverter):
     )
 
     def get_metadata(self):
-        file_path = Path(self.data_interface_objects['VirmenData'].input_args['file_path'])
-        session_id = file_path.stem
-
+        vermin_file_path = Path(self.data_interface_objects['VirmenData'].input_args['file_path'])
+        session_id = vermin_file_path.stem
         date_text = [id_part for id_part in session_id.split('_') if id_part.isdigit()][0]
         session_start = dateparse(date_text, yearfirst=True)
 
-        metadata = dict(
+        metadata = super().get_metadata()
+        metadata.update(
             NWBFile=dict(
                 identifier=session_id,
                 session_start_time=session_start.astimezone(),
@@ -38,17 +38,15 @@ class TowersNWBConverter(NWBConverter):
             ),
         )
 
-        if file_path.is_file():
-            session_data = convert_mat_file_to_dict(mat_file_name=file_path)
+        if vermin_file_path.is_file():
+            session_data = convert_mat_file_to_dict(mat_file_name=vermin_file_path)
             subject_data = session_data['log']['animal']
             age_in_iso_format = duration_isoformat(timedelta(weeks=subject_data['importAge']))
 
             metadata['Subject'].update(
                 subject_id=subject_data['name'],
-                weight=subject_data['importWeight'],
                 age=age_in_iso_format
             )
-
         else:
             print(f"Warning: no subject file detected for session {session_id}!")
 
