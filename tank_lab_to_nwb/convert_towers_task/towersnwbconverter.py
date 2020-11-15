@@ -25,7 +25,6 @@ class TowersNWBConverter(NWBConverter):
         metadata = super().get_metadata()
         metadata.update(
             NWBFile=dict(
-                identifier=session_id,
                 session_start_time=session_start.astimezone(),
                 file_create_date=datetime.now().astimezone(),
                 session_description="no description",
