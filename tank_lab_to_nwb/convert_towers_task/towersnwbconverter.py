@@ -1,5 +1,5 @@
 """Authors: Cody Baker and Ben Dichter."""
-from datetime import datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 
 from dateutil.parser import parse as dateparse
@@ -11,30 +11,31 @@ from ..utils import convert_mat_file_to_dict
 
 
 class TowersNWBConverter(NWBConverter):
+    """Primary conversion class for the Towers task."""
+
     data_interface_classes = dict(
         SpikeGLXRecording=SpikeGLXRecordingInterface,
         VirmenData=VirmenDataInterface,
     )
 
     def get_metadata(self):
+        """Auto-populate as much metadata as possible."""
         vermin_file_path = Path(self.data_interface_objects['VirmenData'].input_args['file_path'])
         session_id = vermin_file_path.stem
         date_text = [id_part for id_part in session_id.split('_') if id_part.isdigit()][0]
         session_start = dateparse(date_text, yearfirst=True)
 
         metadata = super().get_metadata()
-        metadata.update(
-            NWBFile=dict(
+        metadata['NWBFile'].update(
                 session_start_time=session_start.astimezone(),
-                file_create_date=datetime.now().astimezone(),
-                session_description="no description",
                 session_id=session_id,
                 institution="Princeton",
                 lab="Tank"
-            ),
+        )
+        metadata.update(
             Subject=dict(
                 species="Mus musculus"
-            ),
+            )
         )
 
         if vermin_file_path.is_file():
