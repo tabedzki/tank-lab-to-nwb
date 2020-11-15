@@ -14,7 +14,6 @@ if base_path.is_dir():
         input_args = dict(
             SpikeGLXRecording=dict(
                 file_path=spikeglx_file_path,
-                dtype="int16"
             ),
             VirmenData=dict(
                 file_path=virmen_file_path
