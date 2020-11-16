@@ -136,12 +136,6 @@ class VirmenDataInterface(BaseDataInterface):
         right_cue_onsets = np.concatenate([right_cue_onsets, right_padding], axis=0)
         right_cue_onset_data, right_cue_data_indices = create_indexed_array(right_cue_onsets)
 
-        cue_onset_table.add_column(
-            name='left_cue_onset',
-            description='onset times of left cues',
-            data=left_cue_onset_data,
-            index=left_cue_data_indices,
-        )
 
         nwbfile.add_trial_column(name='right_cue_onset',
                                  description='onset times of right cues',
