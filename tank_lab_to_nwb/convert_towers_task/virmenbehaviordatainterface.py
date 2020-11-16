@@ -80,7 +80,7 @@ class VirmenDataInterface(BaseDataInterface):
 
         # Intervals
         if not Path(mat_file).is_file():
-            raise ValueError('{} not a file'.format(nat_file))
+            raise ValueError('{} not a file'.format(mat_file))
 
         nwbfile.add_epoch_column('label', 'name of epoch')
 
