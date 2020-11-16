@@ -122,10 +122,12 @@ class VirmenDataInterface(BaseDataInterface):
             pos_obj = Position(name="Position")
             view_angle_obj = CompassDirection(name='ViewAngle')
 
-            left_cue_onsets = [trial.cueOnset[0] for epoch in matin['log']['block'] for trial in
-                               epoch.trial if np.any(trial.cueOnset[0])]
-            left_cue_offsets = [trial.cueOffset[0] for epoch in matin['log']['block'] for trial in
-                                epoch.trial if np.any(trial.cueOffset[0])]
+            left_cue_onsets = [trial.start + epoch_start_nwb[0] + trial.time[trial.cueOnset[0] - 1]
+                               for epoch in matin['log']['block'] for trial in epoch.trial if
+                               np.any(trial.cueOnset[0])]
+            left_cue_offsets = [trial.start + epoch_start_nwb[0] + trial.time[trial.cueOffset[0] - 1]
+                                for epoch in matin['log']['block'] for trial in epoch.trial if
+                                np.any(trial.cueOffset[0])]
             left_cue_positions = [trial.cuePos[0] for epoch in matin['log']['block'] for trial in
                                   epoch.trial if np.any(trial.cuePos[0])]
 
