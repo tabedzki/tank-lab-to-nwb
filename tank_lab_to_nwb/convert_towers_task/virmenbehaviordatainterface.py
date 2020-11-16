@@ -118,49 +118,50 @@ class VirmenDataInterface(BaseDataInterface):
                                      description='total distance traveled during the trial '
                                                  'normalized to the length of the maze',
                                      data=trial_excess_travel)
-            # Processed position, velocity, viewAngle
-            pos_obj = Position(name="Position")
-            view_angle_obj = CompassDirection(name='ViewAngle')
 
+            # Processed cue timing
             left_cue_onsets = [trial.start + epoch_start_nwb[0] + trial.time[trial.cueOnset[0] - 1]
                                for epoch in matin['log']['block'] for trial in epoch.trial if
                                np.any(trial.cueOnset[0])]
-            left_cue_offsets = [trial.start + epoch_start_nwb[0] + trial.time[trial.cueOffset[0] - 1]
-                                for epoch in matin['log']['block'] for trial in epoch.trial if
-                                np.any(trial.cueOffset[0])]
-            left_cue_positions = [trial.cuePos[0] for epoch in matin['log']['block'] for trial in
-                                  epoch.trial if np.any(trial.cuePos[0])]
-
+            left_padding = np.full((len(trial_starts) - len(left_cue_onsets)), np.nan)
+            left_cue_onsets = np.concatenate([left_cue_onsets, left_padding], axis=0)
             left_cue_onset_data, left_cue_data_indices = create_indexed_array(left_cue_onsets)
-            left_cue_offset_data, _ = create_indexed_array(left_cue_offsets)
-            left_cue_positions_data, _ = create_indexed_array(left_cue_positions)
 
-            left_cue_table = DynamicTable(
-                name='Left cue table',
-                description='left cue information',
+            right_cue_onsets = [trial.start + epoch_start_nwb[0] + trial.time[trial.cueOnset[1] - 1]
+                                for epoch in matin['log']['block'] for trial in epoch.trial if
+                                np.any(trial.cueOnset[1])]
+            right_padding = np.full((len(trial_starts) - len(right_cue_onsets)), np.nan)
+            right_cue_onsets = np.concatenate([right_cue_onsets, right_padding], axis=0)
+            right_cue_onset_data, right_cue_data_indices = create_indexed_array(right_cue_onsets)
+
+            cue_onset_table = DynamicTable(
+                name='CueOnset',
+                description='iteration numbers of ViRMEn when cues were switched on',
                 id=left_cue_data_indices
             )
 
-            left_cue_table.add_column(
+            cue_onset_table.add_column(
                 name='left_cue_onset',
-                description='iteration numbers of ViRMEn when left cues were switched on',
+                description='onset times of left cues',
                 data=left_cue_onset_data,
                 index=left_cue_data_indices,
             )
 
-            left_cue_table.add_column(
-                name='left_cue_offset',
-                description='iteration numbers of ViRMEn when left cues were switched off',
-                data=left_cue_offset_data,
-                index=left_cue_data_indices,
+            cue_onset_table.add_column(
+                name='right_cue_onset',
+                description='onset times of right cues',
+                data=right_cue_onset_data,
+                index=right_cue_data_indices,
             )
 
-            left_cue_table.add_column(
-                name='left_cue_position',
-                description='position of the left cues',
-                data=left_cue_positions_data,
-                index=left_cue_data_indices,
-            )
+            nwbfile.add_trial_column(name=cue_onset_table.name,
+                                     description=cue_onset_table.description,
+                                     index=cue_onset_table.left_cue_onset_index,
+                                     table=cue_onset_table)
+
+            # Processed position, velocity, viewAngle
+            pos_obj = Position(name="Position")
+            view_angle_obj = CompassDirection(name='ViewAngle')
 
             timestamps = []
             pos_data = np.empty((0, 2))
