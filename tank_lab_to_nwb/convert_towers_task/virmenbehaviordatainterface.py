@@ -121,7 +121,7 @@ class VirmenDataInterface(BaseDataInterface):
                                              'normalized to the length of the maze',
                                  data=trial_excess_travel)
 
-        # Processed cue timing
+        # Processed cue timing and position
         left_cue_onsets = [trial.start + epoch_start_nwb[0] + trial.time[trial.cueOnset[0] - 1]
                            if np.any(trial.cueOnset[0]) else np.nan
                            for epoch in matin['log']['block'] for trial in epoch.trial]
@@ -132,15 +132,53 @@ class VirmenDataInterface(BaseDataInterface):
                             for epoch in matin['log']['block'] for trial in epoch.trial]
         right_cue_onset_data, right_cue_data_indices = create_indexed_array(right_cue_onsets)
 
-        nwbfile.add_trial_column(name='right_cue_onset',
-                                 description='onset times of right cues',
-                                 index=right_cue_data_indices,
-                                 data=right_cue_onset_data)
+        left_cue_offsets = [trial.start + epoch_start_nwb[0] + trial.time[trial.cueOffset[0] - 1]
+                            if np.any(trial.cueOffset[0]) else np.nan
+                            for epoch in matin['log']['block'] for trial in epoch.trial]
+        left_cue_offset_data, _ = create_indexed_array(left_cue_offsets)
+
+        right_cue_offsets = [trial.start + epoch_start_nwb[0] + trial.time[trial.cueOffset[1] - 1]
+                             if np.any(trial.cueOffset[1]) else np.nan
+                             for epoch in matin['log']['block'] for trial in epoch.trial]
+        right_cue_offset_data, _ = create_indexed_array(right_cue_offsets)
+
+        left_cue_positions = [trial.cuePos[0] if np.any(trial.cuePos[0]) else np.nan
+                              for epoch in matin['log']['block'] for trial in epoch.trial]
+        left_cue_position_data, _ = create_indexed_array(left_cue_positions)
+
+        right_cue_positions = [trial.cuePos[1] if np.any(trial.cuePos[1]) else np.nan
+                               for epoch in matin['log']['block'] for trial in epoch.trial]
+        right_cue_position_data, _ = create_indexed_array(right_cue_positions)
 
         nwbfile.add_trial_column(name='left_cue_onset',
                                  description='onset times of left cues',
                                  index=left_cue_data_indices,
                                  data=left_cue_onset_data)
+
+        nwbfile.add_trial_column(name='right_cue_onset',
+                                 description='onset times of right cues',
+                                 index=right_cue_data_indices,
+                                 data=right_cue_onset_data)
+
+        nwbfile.add_trial_column(name='left_cue_offset',
+                                 description='offset times of left cues',
+                                 index=left_cue_data_indices,
+                                 data=left_cue_offset_data)
+
+        nwbfile.add_trial_column(name='right_cue_offset',
+                                 description='offset times of right cues',
+                                 index=right_cue_data_indices,
+                                 data=right_cue_offset_data)
+
+        nwbfile.add_trial_column(name='left_cue_position',
+                                 description='position of left cues',
+                                 index=left_cue_data_indices,
+                                 data=left_cue_position_data)
+
+        nwbfile.add_trial_column(name='right_cue_position',
+                                 description='position of right cues',
+                                 index=right_cue_data_indices,
+                                 data=right_cue_position_data)
 
         # Processed position, velocity, viewAngle
         pos_obj = Position(name="Position")
