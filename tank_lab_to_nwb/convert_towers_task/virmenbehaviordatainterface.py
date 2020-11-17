@@ -187,7 +187,6 @@ class VirmenDataInterface(BaseDataInterface):
         timestamps = []
         pos_data = np.empty((0, 2))
         velocity_data = np.empty_like(pos_data)
-        trial_cue_orientation = []
         view_angle_data = []
         for epoch in matin['log']['block']:
             for trial in epoch.trial:
@@ -202,12 +201,6 @@ class VirmenDataInterface(BaseDataInterface):
                 velocity_data = np.concatenate([velocity_data, trial_velocity, padding], axis=0)
                 view_angle_data = np.concatenate([view_angle_data, trial_view_angle,
                                                   padding[:, 0]], axis=0)
-                if (trial.cueCombo[0] == 1).all():
-                    trial_cue_orientation.append('left')
-                elif (trial.cueCombo[1] == 1).all():
-                    trial_cue_orientation.append('right')
-                else:
-                    trial_cue_orientation.append('both')
         pos_obj.add_spatial_series(
             SpatialSeries(
                 name="SpatialSeries",
@@ -223,10 +216,6 @@ class VirmenDataInterface(BaseDataInterface):
                                  unit='cm/s',
                                  resolution=np.nan,
                                  timestamps=H5DataIO(timestamps, compression="gzip"))
-        nwbfile.add_trial_column(name='cue_orientation',
-                                 description='orientation of the cues depending on '
-                                             'which side it was presented',
-                                 data=trial_cue_orientation)
         view_angle_obj.add_spatial_series(
             SpatialSeries(
                 name="SpatialSeries",
