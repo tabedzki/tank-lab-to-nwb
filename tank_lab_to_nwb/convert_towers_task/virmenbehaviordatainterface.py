@@ -123,19 +123,14 @@ class VirmenDataInterface(BaseDataInterface):
 
         # Processed cue timing
         left_cue_onsets = [trial.start + epoch_start_nwb[0] + trial.time[trial.cueOnset[0] - 1]
-                           for epoch in matin['log']['block'] for trial in epoch.trial if
-                           np.any(trial.cueOnset[0])]
-        left_padding = np.full((len(trial_starts) - len(left_cue_onsets)), np.nan)
-        left_cue_onsets = np.concatenate([left_cue_onsets, left_padding], axis=0)
+                           if np.any(trial.cueOnset[0]) else np.nan
+                           for epoch in matin['log']['block'] for trial in epoch.trial]
         left_cue_onset_data, left_cue_data_indices = create_indexed_array(left_cue_onsets)
 
         right_cue_onsets = [trial.start + epoch_start_nwb[0] + trial.time[trial.cueOnset[1] - 1]
-                            for epoch in matin['log']['block'] for trial in epoch.trial if
-                            np.any(trial.cueOnset[1])]
-        right_padding = np.full((len(trial_starts) - len(right_cue_onsets)), np.nan)
-        right_cue_onsets = np.concatenate([right_cue_onsets, right_padding], axis=0)
+                            if np.any(trial.cueOnset[1]) else np.nan
+                            for epoch in matin['log']['block'] for trial in epoch.trial]
         right_cue_onset_data, right_cue_data_indices = create_indexed_array(right_cue_onsets)
-
 
         nwbfile.add_trial_column(name='right_cue_onset',
                                  description='onset times of right cues',
