@@ -10,17 +10,19 @@ virmen_file_path = base_path / "TowersTask/PoissonBlocksReboot_cohort1_VRTrain6_
 nwbfile_path = base_path / "TowersTask_stub.nwb"
 
 if base_path.is_dir():
-    input_args = dict(
-        SpikeGLXRecording=dict(file_path=spikeglx_file_path),
-        VirmenData=dict(file_path=virmen_file_path)
+    source_data = dict(
+        SpikeGLXRecording=dict(file_path=str(spikeglx_file_path.absolute())),
+        VirmenData=dict(file_path=str(virmen_file_path.absolute()))
     )
-    conversion_options = dict(stub_test=True)
+    conversion_options = dict(
+        SpikeGLXRecording=dict(stub_test=True)
+    )
 
-    converter = TowersNWBConverter(**input_args)
+    converter = TowersNWBConverter(**source_data)
     metadata = converter.get_metadata()
     metadata['NWBFile'].update(session_description="Enter session description here.")
     converter.run_conversion(
         nwbfile_path=str(nwbfile_path.absolute()),
-        metadata_dict=metadata,
+        metadata=metadata,
         conversion_options=conversion_options
     )
