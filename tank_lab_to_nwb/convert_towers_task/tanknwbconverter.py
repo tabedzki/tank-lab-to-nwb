@@ -1,9 +1,7 @@
 """Authors: Cody Baker and Ben Dichter."""
-from datetime import timedelta
 from pathlib import Path
 
 from dateutil.parser import parse as dateparse
-from isodate import duration_isoformat
 from nwb_conversion_tools import NWBConverter, SIPickleRecordingExtractorInterface, SIPickleSortingExtractorInterface
 
 from .virmenbehaviordatainterface import VirmenDataInterface
@@ -33,20 +31,12 @@ class TankNWBConverter(NWBConverter):
                 institution="Princeton",
                 lab="Tank"
         )
-        metadata.update(
-            Subject=dict(
-                species="Mus musculus"
-            )
-        )
 
         if vermin_file_path.is_file():
             session_data = convert_mat_file_to_dict(mat_file_name=vermin_file_path)
             subject_data = session_data['log']['animal']
-            age_in_iso_format = duration_isoformat(timedelta(weeks=subject_data['importAge']))
-
             metadata['Subject'].update(
-                subject_id=subject_data['name'],
-                age=age_in_iso_format
+                subject_id=subject_data['name']
             )
         else:
             print(f"Warning: no subject file detected for session {session_id}!")
