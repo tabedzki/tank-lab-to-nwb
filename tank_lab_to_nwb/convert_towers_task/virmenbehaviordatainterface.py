@@ -3,12 +3,14 @@ from datetime import timedelta
 from pathlib import Path
 
 import numpy as np
+from scipy.io import matlab
 from hdmf.backends.hdf5.h5_utils import H5DataIO
 from nwb_conversion_tools.basedatainterface import BaseDataInterface
 from nwb_conversion_tools.utils import get_base_schema, get_schema_from_hdmf_class
 from pynwb import NWBFile, TimeSeries
 from pynwb.behavior import SpatialSeries, Position, CompassDirection
-from ..utils import check_module, convert_mat_file_to_dict, array_to_dt, create_indexed_array
+from ..utils import check_module, convert_mat_file_to_dict, array_to_dt, create_indexed_array, \
+    mat_obj_to_dict
 
 
 class VirmenDataInterface(BaseDataInterface):
@@ -81,8 +83,14 @@ class VirmenDataInterface(BaseDataInterface):
         if Path(mat_file).is_file():
             nwbfile.add_epoch_column('label', 'name of epoch')
 
-            epoch_start_dts = [array_to_dt(x.start) for x in matin['log']['block']]
-            epoch_durations = [timedelta(seconds=x.duration) for x in matin['log']['block']]
+            if isinstance(matin['log']['block'], dict):
+                epochs = [matin['log']['block']]
+            else:
+                epochs = [mat_obj_to_dict(epoch) for epoch in matin['log']['block'] if
+                          isinstance(epoch, matlab.mio5_params.mat_struct)]
+
+            epoch_start_dts = [array_to_dt(epoch['start']) for epoch in epochs]
+            epoch_durations = [timedelta(seconds=epoch['duration']) for epoch in epochs]
             epoch_start_nwb = [(epoch_start_dt - session_start_time).total_seconds()
                                for epoch_start_dt in epoch_start_dts]
             epoch_end_nwb = [(epoch_start_dt - session_start_time + epoch_duration).total_seconds()
