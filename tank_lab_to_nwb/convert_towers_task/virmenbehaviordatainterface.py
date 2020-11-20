@@ -99,9 +99,9 @@ class VirmenDataInterface(BaseDataInterface):
             for j, (start, end) in enumerate(zip(epoch_start_nwb, epoch_end_nwb)):
                 nwbfile.add_epoch(start_time=start, stop_time=end, label='Epoch' + str(j + 1))
 
-            epoch_maze_ids = [epoch.mazeID for epoch in matin['log']['block']]
-            epoch_reward_mil = [epoch.rewardMiL for epoch in matin['log']['block']]
-            epoch_stimulus_config = [epoch.stimulusConfig for epoch in matin['log']['block']]
+            epoch_maze_ids = [epoch['mazeID'] for epoch in epochs]
+            epoch_reward_mil = [epoch['rewardMiL'] for epoch in epochs]
+            epoch_stimulus_config = [epoch['stimulusConfig'] for epoch in epochs]
             nwbfile.add_epoch_column(name='maze_id',
                                      description='identifier of the ViRMEn maze',
                                      data=epoch_maze_ids)
@@ -112,51 +112,59 @@ class VirmenDataInterface(BaseDataInterface):
                                      description='stimulus configuration number',
                                      data=epoch_stimulus_config)
 
-            trial_starts = [trial.start + epoch_start_nwb[0]
-                            for epoch in matin['log']['block']
-                            for trial in epoch.trial]
-            trial_durations = [trial.duration for epoch in matin['log']['block'] for trial in
-                               epoch.trial]
+            trials = [mat_obj_to_dict(trial) for epoch in epochs for trial in epoch['trial']
+                      if isinstance(trial, matlab.mio5_params.mat_struct)]
+            trial_starts = [trial['start'] + epoch_start_nwb[0] for trial in trials]
+            trial_durations = [trial['duration'] for trial in trials]
             trial_ends = [start_time + duration for start_time, duration in
                           zip(trial_starts, trial_durations)]
             for k in range(len(trial_starts)):
                 nwbfile.add_trial(start_time=trial_starts[k], stop_time=trial_ends[k])
 
-            trial_excess_travel = [trial.excessTravel for epoch in matin['log']['block']
-                                   for trial in epoch.trial]
+            trial_excess_travel = [trial['excessTravel'] for trial in trials]
             nwbfile.add_trial_column(name='excess_travel',
                                      description='total distance traveled during the trial '
                                                  'normalized to the length of the maze',
                                      data=trial_excess_travel)
 
             # Processed cue timing and position
-            left_cue_onsets = [trial.start + epoch_start_nwb[0] + trial.time[trial.cueOnset[0] - 1]
-                               if np.any(trial.cueOnset[0]) else np.nan
-                               for epoch in matin['log']['block'] for trial in epoch.trial]
-            left_cue_onset_data, left_cue_data_indices = create_indexed_array(left_cue_onsets)
+            left_cue_onsets = [trial['time'][trial['cueOnset'][0] - 1]
+                               if np.any(trial['cueOnset'][0]) else np.nan for trial in trials]
+            trial_left_cue_onsets = [trial_start + cue_onset for trial_start, cue_onset
+                                     in zip(trial_starts, left_cue_onsets)]
+            left_cue_onset_data, left_cue_onset_indices = create_indexed_array(
+                trial_left_cue_onsets)
 
-            right_cue_onsets = [trial.start + epoch_start_nwb[0] + trial.time[trial.cueOnset[1] - 1]
-                                if np.any(trial.cueOnset[1]) else np.nan
-                                for epoch in matin['log']['block'] for trial in epoch.trial]
-            right_cue_onset_data, right_cue_data_indices = create_indexed_array(right_cue_onsets)
+            right_cue_onsets = [trial['time'][trial['cueOnset'][1] - 1]
+                                if np.any(trial['cueOnset'][1]) else np.nan for trial in trials]
+            trial_right_cue_onsets = [trial_start + cue_onset for trial_start, cue_onset
+                                      in zip(trial_starts, right_cue_onsets)]
+            right_cue_onset_data, right_cue_onset_indices = create_indexed_array(
+                trial_right_cue_onsets)
 
-            left_cue_offsets = [trial.start + epoch_start_nwb[0] + trial.time[trial.cueOffset[0] - 1]
-                                if np.any(trial.cueOffset[0]) else np.nan
-                                for epoch in matin['log']['block'] for trial in epoch.trial]
-            left_cue_offset_data, _ = create_indexed_array(left_cue_offsets)
+            left_cue_offsets = [trial['time'][trial['cueOffset'][0] - 1]
+                                if np.any(trial['cueOffset'][0]) else np.nan for trial in trials]
+            trial_left_cue_offsets = [trial_start + cue_offset for trial_start, cue_offset
+                                      in zip(trial_starts, left_cue_offsets)]
+            left_cue_offset_data, left_cue_offset_indices = create_indexed_array(
+                trial_left_cue_offsets)
 
-            right_cue_offsets = [trial.start + epoch_start_nwb[0] + trial.time[trial.cueOffset[1] - 1]
-                                 if np.any(trial.cueOffset[1]) else np.nan
-                                 for epoch in matin['log']['block'] for trial in epoch.trial]
-            right_cue_offset_data, _ = create_indexed_array(right_cue_offsets)
+            right_cue_offsets = [trial['time'][trial['cueOffset'][1] - 1]
+                                 if np.any(trial['cueOffset'][1]) else np.nan for trial in trials]
+            trial_right_cue_offsets = [trial_start + cue_offset for trial_start, cue_offset
+                                       in zip(trial_starts, right_cue_offsets)]
+            right_cue_offset_data, right_cue_offset_indices = create_indexed_array(
+                trial_right_cue_offsets)
 
-            left_cue_positions = [trial.cuePos[0] if np.any(trial.cuePos[0]) else np.nan
-                                  for epoch in matin['log']['block'] for trial in epoch.trial]
-            left_cue_position_data, _ = create_indexed_array(left_cue_positions)
+            left_cue_positions = [trial['cuePos'][0] if np.any(trial['cuePos'][0]) else np.nan
+                                  for trial in trials]
+            left_cue_position_data, left_cue_position_indices = create_indexed_array(
+                left_cue_positions)
 
-            right_cue_positions = [trial.cuePos[1] if np.any(trial.cuePos[1]) else np.nan
-                                   for epoch in matin['log']['block'] for trial in epoch.trial]
-            right_cue_position_data, _ = create_indexed_array(right_cue_positions)
+            right_cue_positions = [trial['cuePos'][1] if np.any(trial['cuePos'][1]) else np.nan
+                                   for trial in trials]
+            right_cue_position_data, right_cue_position_indices = create_indexed_array(
+                right_cue_positions)
 
             nwbfile.add_trial_column(name='left_cue_onset',
                                      description='onset times of left cues',
@@ -196,19 +204,18 @@ class VirmenDataInterface(BaseDataInterface):
             pos_data = np.empty((0, 2))
             velocity_data = np.empty_like(pos_data)
             view_angle_data = []
-            for epoch in matin['log']['block']:
-                for trial in epoch.trial:
-                    trial_total_time = trial.start + epoch_start_nwb[0] + trial.time
-                    timestamps.extend(trial_total_time)
+            for trial in trials:
+                trial_total_time = trial['start'] + epoch_start_nwb[0] + trial['time']
+                timestamps.extend(trial_total_time)
 
-                    padding = np.full((trial.time.shape[0] - trial.position.shape[0], 2), np.nan)
-                    trial_position = trial.position[:, :-1]
-                    trial_velocity = trial.velocity[:, :-1]
-                    trial_view_angle = trial.position[:, -1]
-                    pos_data = np.concatenate([pos_data, trial_position, padding], axis=0)
-                    velocity_data = np.concatenate([velocity_data, trial_velocity, padding], axis=0)
-                    view_angle_data = np.concatenate([view_angle_data, trial_view_angle,
-                                                      padding[:, 0]], axis=0)
+                padding = np.full((trial['time'].shape[0] - trial['position'].shape[0], 2), np.nan)
+                trial_position = trial['position'][:, :-1]
+                trial_velocity = trial['velocity'][:, :-1]
+                trial_view_angle = trial['position'][:, -1]
+                pos_data = np.concatenate([pos_data, trial_position, padding], axis=0)
+                velocity_data = np.concatenate([velocity_data, trial_velocity, padding], axis=0)
+                view_angle_data = np.concatenate([view_angle_data, trial_view_angle,
+                                                  padding[:, 0]], axis=0)
             pos_obj.add_spatial_series(
                 SpatialSeries(
                     name="SpatialSeries",
