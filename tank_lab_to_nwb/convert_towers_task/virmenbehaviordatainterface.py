@@ -168,32 +168,32 @@ class VirmenDataInterface(BaseDataInterface):
 
             nwbfile.add_trial_column(name='left_cue_onset',
                                      description='onset times of left cues',
-                                     index=left_cue_data_indices,
+                                     index=left_cue_onset_indices,
                                      data=left_cue_onset_data)
 
             nwbfile.add_trial_column(name='right_cue_onset',
                                      description='onset times of right cues',
-                                     index=right_cue_data_indices,
+                                     index=right_cue_onset_indices,
                                      data=right_cue_onset_data)
 
             nwbfile.add_trial_column(name='left_cue_offset',
                                      description='offset times of left cues',
-                                     index=left_cue_data_indices,
+                                     index=left_cue_offset_indices,
                                      data=left_cue_offset_data)
 
             nwbfile.add_trial_column(name='right_cue_offset',
                                      description='offset times of right cues',
-                                     index=right_cue_data_indices,
+                                     index=right_cue_offset_indices,
                                      data=right_cue_offset_data)
 
             nwbfile.add_trial_column(name='left_cue_position',
                                      description='position of left cues',
-                                     index=left_cue_data_indices,
+                                     index=left_cue_position_indices,
                                      data=left_cue_position_data)
 
             nwbfile.add_trial_column(name='right_cue_position',
                                      description='position of right cues',
-                                     index=right_cue_data_indices,
+                                     index=right_cue_position_indices,
                                      data=right_cue_position_data)
 
             # Processed position, velocity, viewAngle
