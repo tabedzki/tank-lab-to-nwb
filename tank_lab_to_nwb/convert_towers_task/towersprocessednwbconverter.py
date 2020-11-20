@@ -8,8 +8,8 @@ from .virmenbehaviordatainterface import VirmenDataInterface
 from ..utils import convert_mat_file_to_dict
 
 
-class TankNWBConverter(NWBConverter):
-    """Primary conversion class for the Tank lab processing pipeline."""
+class TowersProcessedNWBConverter(NWBConverter):
+    """Primary conversion class for the Tank lab Towers task processing pipeline."""
 
     data_interface_classes = dict(
         SIRecording=SIPickleRecordingExtractorInterface,
