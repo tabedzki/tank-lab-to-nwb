@@ -35,8 +35,10 @@ class TowersProcessedNWBConverter(NWBConverter):
         if vermin_file_path.is_file():
             session_data = convert_mat_file_to_dict(mat_file_name=vermin_file_path)
             subject_data = session_data['log']['animal']
-            metadata['Subject'].update(
-                subject_id=subject_data['name']
+            metadata.update(
+                Subject=dict(
+                    subject_id=subject_data['name']
+                )
             )
         else:
             print(f"Warning: no subject file detected for session {session_id}!")
