@@ -3,14 +3,12 @@ from datetime import timedelta
 from pathlib import Path
 
 import numpy as np
-from scipy.io import matlab
 from hdmf.backends.hdf5.h5_utils import H5DataIO
 from nwb_conversion_tools.basedatainterface import BaseDataInterface
 from nwb_conversion_tools.utils import get_base_schema, get_schema_from_hdmf_class
 from pynwb import NWBFile, TimeSeries
 from pynwb.behavior import SpatialSeries, Position, CompassDirection
-from ..utils import check_module, convert_mat_file_to_dict, array_to_dt, create_indexed_array, \
-    mat_obj_to_dict
+from ..utils import check_module, convert_mat_file_to_dict, array_to_dt, create_indexed_array
 
 
 class VirmenDataInterface(BaseDataInterface):
