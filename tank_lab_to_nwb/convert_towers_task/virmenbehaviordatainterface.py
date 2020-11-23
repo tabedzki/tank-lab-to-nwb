@@ -86,8 +86,7 @@ class VirmenDataInterface(BaseDataInterface):
             if isinstance(matin['log']['block'], dict):
                 epochs = [matin['log']['block']]
             else:
-                epochs = [mat_obj_to_dict(epoch) for epoch in matin['log']['block'] if
-                          isinstance(epoch, matlab.mio5_params.mat_struct)]
+                epochs = matin['log']['block']
 
             epoch_start_dts = [array_to_dt(epoch['start']) for epoch in epochs]
             epoch_durations = [timedelta(seconds=epoch['duration']) for epoch in epochs]
@@ -112,8 +111,7 @@ class VirmenDataInterface(BaseDataInterface):
                                      description='stimulus configuration number',
                                      data=epoch_stimulus_config)
 
-            trials = [mat_obj_to_dict(trial) for epoch in epochs for trial in epoch['trial']
-                      if isinstance(trial, matlab.mio5_params.mat_struct)]
+            trials = [trial for epoch in epochs for trial in epoch['trial']]
             trial_starts = [trial['start'] + epoch_start_nwb[0] for trial in trials]
             trial_durations = [trial['duration'] for trial in trials]
             trial_ends = [start_time + duration for start_time, duration in
