@@ -8,6 +8,7 @@ from nwb_conversion_tools.basedatainterface import BaseDataInterface
 from nwb_conversion_tools.utils import get_base_schema, get_schema_from_hdmf_class
 from pynwb import NWBFile, TimeSeries
 from pynwb.behavior import SpatialSeries, Position, CompassDirection
+
 from ..utils import check_module, convert_mat_file_to_dict, array_to_dt, create_indexed_array
 
 
@@ -15,67 +16,29 @@ class VirmenDataInterface(BaseDataInterface):
     """Description here."""
 
     @classmethod
-    def get_input_schema(cls):
-        """
-        Place description here.
-
-        Parameters
-        ----------
-        cls : TYPE
-            DESCRIPTION.
-
-        Returns
-        -------
-        TYPE
-            DESCRIPTION.
-
-        """
+    def get_source_schema(cls):
+        """Compile input schemas from each of the data interface classes."""
         return dict(
-            required=['folder_path'],
+            required=['file_path'],
             properties=dict(
                 file_path=dict(type='string')
             )
         )
 
     def get_metadata_schema(self):
-        """
-        Place description here.
-
-        Returns
-        -------
-        metadata_schema : TYPE
-            DESCRIPTION.
-
-        """
+        """Compile metadata schemas from each of the data interface objects."""
         metadata_schema = get_base_schema()
-
-        # ideally most of this be automatically determined from pynwb docvals
         metadata_schema['properties']['SpatialSeries'] = get_schema_from_hdmf_class(SpatialSeries)
         required_fields = ['SpatialSeries']
         for field in required_fields:
             metadata_schema['required'].append(field)
-
         return metadata_schema
 
-    def convert_data(self, nwbfile: NWBFile, metadata_dict: dict, stub_test: bool = False):
-        """
-        Primary conversion function for the custom tank lab behavioral interface.
-
-        Parameters
-        ----------
-        nwbfile : NWBFile
-            DESCRIPTION.
-        metadata_dict : dict
-            DESCRIPTION.
-        stub_test : bool, optional
-            DESCRIPTION. The default is False.
-
-        """
-        mat_file = self.input_args['file_path']
+    def run_conversion(self, nwbfile: NWBFile, metadata: dict):
+        """Primary conversion function for the custom Tank lab behavioral interface."""
+        mat_file = self.source_data['file_path']
         matin = convert_mat_file_to_dict(mat_file)
-        # TODO: move this to get_metadata in main converter
         session_start_time = array_to_dt(matin['log']['session']['start'])
-        # session_start_time = metadata_dict['session_start_time']
 
         # Intervals
         if Path(mat_file).is_file():

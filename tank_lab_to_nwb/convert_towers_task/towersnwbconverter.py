@@ -20,7 +20,7 @@ class TowersNWBConverter(NWBConverter):
 
     def get_metadata(self):
         """Auto-populate as much metadata as possible."""
-        vermin_file_path = Path(self.data_interface_objects['VirmenData'].input_args['file_path'])
+        vermin_file_path = Path(self.data_interface_objects['VirmenData'].source_data['file_path'])
         session_id = vermin_file_path.stem
         date_text = [id_part for id_part in session_id.split('_') if id_part.isdigit()][0]
         session_start = dateparse(date_text, yearfirst=True)
