@@ -60,7 +60,30 @@ def mat_obj_to_dict(mat_struct):
         dict_from_struct[field_name] = mat_struct.__dict__[field_name]
         if isinstance(dict_from_struct[field_name], matlab.mio5_params.mat_struct):
             dict_from_struct[field_name] = mat_obj_to_dict(dict_from_struct[field_name])
+        elif isinstance(dict_from_struct[field_name], np.ndarray):
+            try:
+                dict_from_struct[field_name] = mat_obj_to_array(dict_from_struct[field_name])
+            except TypeError:
+                continue
     return dict_from_struct
+
+
+def mat_obj_to_array(mat_struct_array):
+    """Construct array from matlab cell arrays.
+    Recursively converts array elements if they contain mat objects."""
+    if has_struct(mat_struct_array):
+        array_from_cell = [mat_obj_to_dict(mat_struct) for mat_struct in mat_struct_array]
+        array_from_cell = np.array(array_from_cell)
+    else:
+        array_from_cell = mat_struct_array
+
+    return array_from_cell
+
+
+def has_struct(mat_struct_array):
+    """Determines if a matlab cell array contains any mat objects."""
+    return any(
+        isinstance(mat_struct, matlab.mio5_params.mat_struct) for mat_struct in mat_struct_array)
 
 
 def convert_mat_file_to_dict(mat_file_name):
@@ -96,6 +119,6 @@ def create_indexed_array(ndarray):
         else:
             flat_array.append(array)
             array_indices.append(1)
-    array_indices = np.cumsum(array_indices)
+    array_indices = np.cumsum(array_indices, dtype=np.uint64)
 
     return flat_array, array_indices
