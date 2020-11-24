@@ -157,7 +157,7 @@ class VirmenDataInterface(BaseDataInterface):
             view_angle_data = []
             for trial in trials:
                 trial_total_time = trial['start'] + epoch_start_nwb[0] + trial['time']
-                timestamps.extend(trial_total_time)
+                timestamps.extend(trial_total_time.astype(np.float64, casting='same_kind'))
 
                 padding = np.full((trial['time'].shape[0] - trial['position'].shape[0], 2), np.nan)
                 trial_position = trial['position'][:, :-1]

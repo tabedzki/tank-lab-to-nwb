@@ -119,6 +119,6 @@ def create_indexed_array(ndarray):
         else:
             flat_array.append(array)
             array_indices.append(1)
-    array_indices = np.cumsum(array_indices)
+    array_indices = np.cumsum(array_indices, dtype=np.uint64)
 
     return flat_array, array_indices
