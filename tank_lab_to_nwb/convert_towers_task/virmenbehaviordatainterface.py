@@ -89,31 +89,29 @@ class VirmenDataInterface(BaseDataInterface):
             # Processed cue timing and position
             left_cue_onsets = [
                 trial['start'] + epoch_start_nwb[0] + trial['time'][trial['cueOnset'][0] - 1]
-                if np.any(trial['cueOnset'][0]) else [] for trial in trials]
+                if np.any(trial['cueOnset'][0]) else trial['cueOnset'][0] for trial in trials]
             left_cue_onset_data, left_cue_onset_indices = create_indexed_array(left_cue_onsets)
 
             right_cue_onsets = [
                 trial['start'] + epoch_start_nwb[0] + trial['time'][trial['cueOnset'][1] - 1]
-                if np.any(trial['cueOnset'][1]) else [] for trial in trials]
+                if np.any(trial['cueOnset'][1]) else trial['cueOnset'][1] for trial in trials]
             right_cue_onset_data, right_cue_onset_indices = create_indexed_array(right_cue_onsets)
 
             left_cue_offsets = [
                 trial['start'] + epoch_start_nwb[0] + trial['time'][trial['cueOffset'][0] - 1]
-                if np.any(trial['cueOffset'][0]) else [] for trial in trials]
+                if np.any(trial['cueOffset'][0]) else trial['cueOffset'][0] for trial in trials]
             left_cue_offset_data, left_cue_offset_indices = create_indexed_array(left_cue_offsets)
 
             right_cue_offsets = [
                 trial['start'] + epoch_start_nwb[0] + trial['time'][trial['cueOffset'][1] - 1]
-                if np.any(trial['cueOffset'][1]) else [] for trial in trials]
+                if np.any(trial['cueOffset'][1]) else trial['cueOffset'][1] for trial in trials]
             right_cue_offset_data, right_cue_offset_indices = create_indexed_array(right_cue_offsets)
 
-            left_cue_positions = [trial['cuePos'][0] if np.any(trial['cuePos'][0]) else []
-                                  for trial in trials]
+            left_cue_positions = [trial['cuePos'][0] for trial in trials]
             left_cue_position_data, left_cue_position_indices = create_indexed_array(
                 left_cue_positions)
 
-            right_cue_positions = [trial['cuePos'][1] if np.any(trial['cuePos'][1]) else []
-                                   for trial in trials]
+            right_cue_positions = [trial['cuePos'][1] for trial in trials]
             right_cue_position_data, right_cue_position_indices = create_indexed_array(
                 right_cue_positions)
 
