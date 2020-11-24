@@ -10,8 +10,8 @@ from .virmenbehaviordatainterface import VirmenDataInterface
 from ..utils import convert_mat_file_to_dict
 
 
-class TowersNWBConverter(NWBConverter):
-    """Primary conversion class for the Towers task."""
+class TowersRawNWBConverter(NWBConverter):
+    """Secondary conversion class for the Towers task; does not sychronize with ttl or write spiking output."""
 
     data_interface_classes = dict(
         SpikeGLXRecording=SpikeGLXRecordingInterface,
