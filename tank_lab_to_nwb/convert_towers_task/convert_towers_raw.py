@@ -1,7 +1,7 @@
 """Authors: Alessio Buccino, Cody Baker, Szonja Weigl, and Ben Dichter."""
 from pathlib import Path
 
-from tank_lab_to_nwb import TowersNWBConverter
+from tank_lab_to_nwb import TowersRawNWBConverter
 
 base_path = Path("D:/Neuropixels/")
 spikeglx_file_path = base_path / "Neuropixels/A256_bank1_2020_09_30/A256_bank1_2020_09_30_g0/" \
@@ -18,7 +18,7 @@ if base_path.is_dir():
         SpikeGLXRecording=dict(stub_test=True)
     )
 
-    converter = TowersNWBConverter(**source_data)
+    converter = TowersRawNWBConverter(**source_data)
     metadata = converter.get_metadata()
     metadata['NWBFile'].update(session_description="Enter session description here.")
     converter.run_conversion(
