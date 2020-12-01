@@ -18,7 +18,7 @@ if base_path.is_dir():
         SpikeGLXRecording=dict(stub_test=True)
     )
 
-    converter = TowersRawNWBConverter(**source_data)
+    converter = TowersRawNWBConverter(source_data)
     metadata = converter.get_metadata()
     metadata['NWBFile'].update(session_description="Enter session description here.")
     converter.run_conversion(
