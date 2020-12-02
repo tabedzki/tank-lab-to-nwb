@@ -53,12 +53,16 @@ converter = TowersProcessedNWBConverter(source_data)
 metadata = converter.get_metadata()
 metadata['NWBFile'].update(session_description=session_description)
 metadata['Subject'].update(subject_info)
+
+# TODO: Move to ProcessedNWBConverter, instantiate 'dummy' SpikeGLXRecordingInterface to use its get_metadata
 metadata.update(
     ct.SpikeGLXRecordingInterface.get_ecephys_metadata(
         spikeglx_meta=se.extractors.spikeglxrecordingextractor.readSGLX.readMeta(raw_data_file),
         channel_ids=converter.data_interface_objects['SIRecording'].recording_extractor.get_channel_ids()
     )
 )
+#####
+
 converter.run_conversion(
     nwbfile_path=str(nwbfile_path.absolute()),
     metadata=metadata,
