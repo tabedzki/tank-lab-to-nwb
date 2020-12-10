@@ -10,10 +10,6 @@ import numpy as np
 from ipywidgets import widgets, BoundedFloatText, Dropdown, Checkbox
 
 
-def towers_task_widget(node):
-    return vis2widget(TowersTaskPlaceFieldWidget(node))
-
-
 class TowersTaskPlaceFieldWidget(PlaceFieldWidget):
 
     def __init__(self, spatial_series,
