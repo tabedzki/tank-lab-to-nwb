@@ -34,13 +34,13 @@ class TowersTaskPlaceFieldWidget(PlaceFieldWidget):
             ss[np.searchsorted(tt, left_towers)] -= 1
             starts = np.searchsorted(tt, trials.start_time[:])
             ends = np.searchsorted(tt, trials.stop_time[:])
-            ss = np.zeros_like(tt)
+            states = np.zeros_like(tt)
             for start, end in zip(starts, ends):
-                ss[start:end] = np.cumsum(ss[start:end])
+                states[start:end] = np.cumsum(ss[start:end])
 
             print(ss)
             self.pos[:, 0] = self.pos[:, 1]
-            self.pos[:, 1] = ss
+            self.pos[:, 1] = states
 
         self.pos, self.unit = get_timeseries_in_units(spatial_series)
 
