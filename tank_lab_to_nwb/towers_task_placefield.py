@@ -1,28 +1,16 @@
-import nwbwidgets
 from nwbwidgets.placefield import PlaceFieldWidget
-from nwbwidgets.utils.timeseries import get_timeseries_in_units, get_timeseries_tt
-from nwbwidgets.utils.widgets import interactive_output
-from nwbwidgets.base import vis2widget
-
-import pynwb
+from nwbwidgets.utils.timeseries import get_timeseries_in_units
+import matplotlib.pyplot as plt
 import numpy as np
 
-from ipywidgets import widgets, BoundedFloatText, Dropdown, Checkbox
+from ipywidgets import BoundedFloatText, Dropdown, Checkbox
 
 
 class TowersTaskPlaceFieldWidget(PlaceFieldWidget):
 
-    def __init__(self, spatial_series,
-                 **kwargs):
-        trials = spatial_series.get_ancestor('NWBFile').trials
-
-        self.units = spatial_series.get_ancestor('NWBFile').units
-        start = 0
-        stop = None
-        self.pos_tt = get_timeseries_tt(spatial_series, start, stop)
+    def get_position(self, spatial_series):
         self.pos, self.unit = get_timeseries_in_units(spatial_series)
-        self.pixel_width = (np.nanmax(self.pos) - np.nanmin(self.pos)) / 1000
-
+        trials = spatial_series.get_ancestor('NWBFile').trials
         if trials is not None:
             left_towers = trials.left_cue_onset[:]
             left_towers = left_towers[~np.isnan(left_towers)]
@@ -38,14 +26,10 @@ class TowersTaskPlaceFieldWidget(PlaceFieldWidget):
             for start, end in zip(starts, ends):
                 states[start:end] = np.cumsum(ss[start:end])
 
-            print(ss)
             self.pos[:, 0] = self.pos[:, 1]
             self.pos[:, 1] = states
 
-        self.pos, self.unit = get_timeseries_in_units(spatial_series)
-
-        self.pixel_width = (np.nanmax(self.pos) - np.nanmin(self.pos)) / 1000
-
+    def get_controls(self):
         style = {'description_width': 'initial'}
         bft_gaussian_x = BoundedFloatText(value=0.0184, min=0, max=99999, description='gaussian sd (cm)', style=style)
         bft_gaussian_y = BoundedFloatText(value=0, min=0, max=99999, description='gaussian sd (cm)', style=style)
@@ -53,23 +37,29 @@ class TowersTaskPlaceFieldWidget(PlaceFieldWidget):
         dd_unit_select = Dropdown(options=np.arange(len(self.units)), description='unit')
         cb_velocity = Checkbox(value=False, description='use velocity', indent=False)
 
-        self.controls = dict(
-            gaussian_sd_x=bft_gaussian_x,
-            gaussian_sd_y=bft_gaussian_y,
-            speed_thresh=bft_speed,
-            index=dd_unit_select,
-            use_velocity=cb_velocity
-        )
+        return bft_gaussian_x, bft_gaussian_y, bft_speed, dd_unit_select, cb_velocity
 
-        out_fig = interactive_output(self.do_rate_map, self.controls)
 
-        self.children = [
-            widgets.VBox([
-                bft_gaussian_x,
-                bft_gaussian_y,
-                bft_speed,
-                dd_unit_select,
-                cb_velocity,
-            ]),
-            vis2widget(out_fig)
-        ]
+    def do_rate_map(self, index=0, speed_thresh=0.03, gaussian_sd_x=0.0184, gaussian_sd_y=0.0184, use_velocity=False):
+        occupancy, filtered_firing_rate, [edges_x, edges_y] = self.compute_twodim_firing_rate(index=index,
+                                                                                         speed_thresh=speed_thresh,
+                                                                                         gaussian_sd_x=gaussian_sd_x,
+                                                                                         gaussian_sd_y=gaussian_sd_y,
+                                                                                         use_velocity=use_velocity)
+
+
+        fig, ax = plt.subplots(figsize=(10, 10))
+        im = ax.imshow(filtered_firing_rate, interpolation = 'nearest',
+                       extent=[edges_x[0], edges_x[-1], edges_y[0], edges_y[-1]],
+                       aspect='auto')
+
+        ax.set_xlabel('x ({})'.format(self.unit))
+        ax.set_ylabel('y (Evidence)')
+        ax.set_ylim(np.nanmin(self.pos[:, 1] - 1), np.nanmax(self.pos[:, 1] + 2))
+        ax.set_xlim(0, np.nanmax(self.pos[:, 0] + 0.01))
+        cbar = plt.colorbar(im)
+        im.set_clim(0, np.nanmean(filtered_firing_rate))
+        cbar.ax.set_ylabel('firing rate (Hz)')
+
+        return fig
+
