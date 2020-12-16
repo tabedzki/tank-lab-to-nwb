@@ -8,6 +8,9 @@ from ipywidgets import BoundedFloatText, Dropdown, Checkbox
 
 class TowersTaskPlaceFieldWidget(PlaceFieldWidget):
 
+    def get_pixel_width(self):
+        self.pixel_width = [(np.nanmax(self.pos) - np.nanmin(self.pos)) / 1000, 1]
+
     def get_position(self, spatial_series):
         self.pos, self.unit = get_timeseries_in_units(spatial_series)
         trials = spatial_series.get_ancestor('NWBFile').trials
@@ -49,7 +52,7 @@ class TowersTaskPlaceFieldWidget(PlaceFieldWidget):
 
 
         fig, ax = plt.subplots(figsize=(10, 10))
-        im = ax.imshow(filtered_firing_rate, interpolation = 'nearest',
+        im = ax.imshow(filtered_firing_rate,
                        extent=[edges_x[0], edges_x[-1], edges_y[0], edges_y[-1]],
                        aspect='auto')
 
