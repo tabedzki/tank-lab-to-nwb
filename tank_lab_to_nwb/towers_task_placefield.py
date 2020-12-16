@@ -31,9 +31,9 @@ class TowersTaskPlaceFieldWidget(PlaceFieldWidget):
 
     def get_controls(self):
         style = {'description_width': 'initial'}
-        bft_gaussian_x = BoundedFloatText(value=0.0184, min=0, max=99999, description='gaussian sd (cm)', style=style)
-        bft_gaussian_y = BoundedFloatText(value=0, min=0, max=99999, description='gaussian sd (cm)', style=style)
-        bft_speed = BoundedFloatText(value=0.03, min=0, max=99999, description='speed threshold (cm/s)', style=style)
+        bft_gaussian_x = BoundedFloatText(value=0.0184, min=0, max=99999, description='gaussian sd x (cm)', style=style)
+        bft_gaussian_y = BoundedFloatText(value=0, min=0, max=99999, description='gaussian sd y (cm)', style=style)
+        bft_speed = BoundedFloatText(value=0, min=0, max=99999, description='speed threshold (cm/s)', style=style)
         dd_unit_select = Dropdown(options=np.arange(len(self.units)), description='unit')
         cb_velocity = Checkbox(value=False, description='use velocity', indent=False)
 
