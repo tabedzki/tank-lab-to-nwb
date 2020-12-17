@@ -9,7 +9,7 @@ from ipywidgets import BoundedFloatText, Dropdown, Checkbox
 class TowersTaskPlaceFieldWidget(PlaceFieldWidget):
 
     def get_pixel_width(self):
-        self.pixel_width = [(np.nanmax(self.pos) - np.nanmin(self.pos)) / 1000, 1]
+        self.pixel_width = [(np.nanmax(self.pos[:,0]) - np.nanmin(self.pos[:,0])) / 1000, int(1)]
 
     def get_position(self, spatial_series):
         self.pos, self.unit = get_timeseries_in_units(spatial_series)
@@ -31,14 +31,21 @@ class TowersTaskPlaceFieldWidget(PlaceFieldWidget):
 
             self.pos[:, 0] = self.pos[:, 1]
             self.pos[:, 1] = states
+            bad_indices = np.isnan(self.pos[:, 0]) | np.isnan(self.pos[:, 1])
+            good_indices = ~bad_indices
+            good_tt = self.pos_tt[good_indices]
+            self.pos_tt = good_tt
+            good_x = self.pos[good_indices, 0]
+            good_y = self.pos[good_indices, 1]
+            self.pos = np.column_stack([good_x, good_y])
 
     def get_controls(self):
         style = {'description_width': 'initial'}
         bft_gaussian_x = BoundedFloatText(value=0.0184, min=0, max=99999, description='gaussian sd x (cm)', style=style)
         bft_gaussian_y = BoundedFloatText(value=0, min=0, max=99999, description='gaussian sd y (cm)', style=style)
-        bft_speed = BoundedFloatText(value=0, min=0, max=99999, description='speed threshold (cm/s)', style=style)
+        bft_speed = BoundedFloatText(value=0.03, min=0, max=99999, description='speed threshold (m/s)', style=style)
         dd_unit_select = Dropdown(options=np.arange(len(self.units)), description='unit')
-        cb_velocity = Checkbox(value=False, description='use velocity', indent=False)
+        cb_velocity = Checkbox(value=False, description='use velocity', indent=False, disabled=True)
 
         return bft_gaussian_x, bft_gaussian_y, bft_speed, dd_unit_select, cb_velocity
 
@@ -52,16 +59,15 @@ class TowersTaskPlaceFieldWidget(PlaceFieldWidget):
 
 
         fig, ax = plt.subplots(figsize=(10, 10))
+        filtered_firing_rate = filtered_firing_rate[:, edges_x[1:] > 0]
+        edges_x = edges_x[edges_x >= 0]
         im = ax.imshow(filtered_firing_rate,
                        extent=[edges_x[0], edges_x[-1], edges_y[0], edges_y[-1]],
                        aspect='auto')
-
         ax.set_xlabel('x ({})'.format(self.unit))
         ax.set_ylabel('y (Evidence)')
-        ax.set_ylim(np.nanmin(self.pos[:, 1] - 1), np.nanmax(self.pos[:, 1] + 2))
-        ax.set_xlim(0, np.nanmax(self.pos[:, 0] + 0.01))
+
         cbar = plt.colorbar(im)
-        im.set_clim(0, np.nanmean(filtered_firing_rate))
         cbar.ax.set_ylabel('firing rate (Hz)')
 
         return fig
