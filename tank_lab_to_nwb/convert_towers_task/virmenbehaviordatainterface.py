@@ -50,21 +50,42 @@ class VirmenDataInterface(BaseDataInterface):
                 epochs = matin['log']['block']
 
             epoch_start_dts = [array_to_dt(epoch['start']) for epoch in epochs]
-            epoch_durations = [timedelta(seconds=epoch['duration']) for epoch in epochs]
+            epoch_durations_dts = [timedelta(seconds=epoch['duration']) for epoch in epochs]
             epoch_start_nwb = [(epoch_start_dt - session_start_time).total_seconds()
                                for epoch_start_dt in epoch_start_dts]
             epoch_end_nwb = [(epoch_start_dt - session_start_time + epoch_duration).total_seconds()
                              for epoch_start_dt, epoch_duration in
-                             zip(epoch_start_dts, epoch_durations)]
+                             zip(epoch_start_dts, epoch_durations_dts)]
             for j, (start, end) in enumerate(zip(epoch_start_nwb, epoch_end_nwb)):
                 nwbfile.add_epoch(start_time=start, stop_time=end, label='Epoch' + str(j + 1))
 
             epoch_maze_ids = [epoch['mazeID'] for epoch in epochs]
+            epoch_main_maze_ids = [epoch['mainMazeID'] for epoch in epochs]
+            epoch_easy_flag = [epoch['easyBlockFlag'] for epoch in epochs]
+            epoch_first_trial = [epoch['firstTrial'] for epoch in epochs]
+            epoch_num_trials = [epoch['trial'].shape[0] for epoch in epochs]
+            epoch_durations = [epoch['duration'] for epoch in epochs]
             epoch_reward_mil = [epoch['rewardMiL'] for epoch in epochs]
             epoch_stimulus_config = [epoch['stimulusConfig'] for epoch in epochs]
             nwbfile.add_epoch_column(name='maze_id',
-                                     description='identifier of the ViRMEn maze',
+                                     description='number of maze run in an epoch',
                                      data=epoch_maze_ids)
+            nwbfile.add_epoch_column(name='main_maze_id',
+                                     description='number of maze of "highest" level for subject',
+                                     data=epoch_main_maze_ids)
+            nwbfile.add_epoch_column(name='easy_epoch',
+                                     description='1 if block was flagged as easy '
+                                                 '(maze_id < main_maze_id)',
+                                     data=epoch_easy_flag)
+            nwbfile.add_epoch_column(name='first_trial',
+                                     description='first trial run in an epoch',
+                                     data=epoch_first_trial)
+            nwbfile.add_epoch_column(name='num_trials',
+                                     description='number of trials in an epoch',
+                                     data=epoch_num_trials)
+            nwbfile.add_epoch_column(name='duration',
+                                     description='duration of epoch in seconds',
+                                     data=epoch_durations)
             nwbfile.add_epoch_column(name='reward_ml',
                                      description='reward in ml',
                                      data=epoch_reward_mil)
@@ -80,7 +101,35 @@ class VirmenDataInterface(BaseDataInterface):
             for k in range(len(trial_starts)):
                 nwbfile.add_trial(start_time=trial_starts[k], stop_time=trial_ends[k])
 
+            trial_iterations = [trial['iterations'] for trial in trials]
+            trial_i_cue_entry = [trial['iCueEntry'] for trial in trials]
+            trial_i_mem_entry = [trial['iMemEntry'] for trial in trials]
+            trial_i_turn_entry = [trial['iTurnEntry'] for trial in trials]
+            trial_i_arm_entry = [trial['iArmEntry'] for trial in trials]
+            trial_i_blank = [trial['iBlank'] for trial in trials]
             trial_excess_travel = [trial['excessTravel'] for trial in trials]
+
+            nwbfile.add_trial_column(name='duration',
+                                     description='duration of trial in seconds',
+                                     data=trial_durations)
+            nwbfile.add_trial_column(name='iterations',
+                                     description='number of iterations (frames) for entire trial',
+                                     data=trial_iterations)
+            nwbfile.add_trial_column(name='i_cue_entry',
+                                     description='iteration number when subject entered cue region',
+                                     data=trial_i_cue_entry)
+            nwbfile.add_trial_column(name='i_mem_entry',
+                                     description='iteration number when subject entered memory region',
+                                     data=trial_i_mem_entry)
+            nwbfile.add_trial_column(name='i_turn_entry',
+                                     description='iteration number when subject entered turn region',
+                                     data=trial_i_turn_entry)
+            nwbfile.add_trial_column(name='i_arm_entry',
+                                     description='iteration number when subject entered arm region',
+                                     data=trial_i_arm_entry)
+            nwbfile.add_trial_column(name='i_blank',
+                                     description='iteration number when screen is turned off',
+                                     data=trial_i_blank)
             nwbfile.add_trial_column(name='excess_travel',
                                      description='total distance traveled during the trial '
                                                  'normalized to the length of the maze',
