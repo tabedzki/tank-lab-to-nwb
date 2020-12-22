@@ -40,6 +40,9 @@ class VirmenDataInterface(BaseDataInterface):
         matin = convert_mat_file_to_dict(mat_file)
         session_start_time = array_to_dt(matin['log']['session']['start'])
 
+        # Extension of lab metadata
+        nwbfile.add_lab_meta_data(metadata['lab_meta_data'])
+
         # Intervals
         if Path(mat_file).is_file():
             nwbfile.add_epoch_column('label', 'name of epoch')
