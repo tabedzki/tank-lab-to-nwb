@@ -104,6 +104,8 @@ class VirmenDataInterface(BaseDataInterface):
             for k in range(len(trial_starts)):
                 nwbfile.add_trial(start_time=trial_starts[k], stop_time=trial_ends[k])
 
+            trial_idx = [trial_id for epoch in epochs
+                         for trial_id in np.arange(0, epoch['trial'].shape[0])]
             trial_iterations = [trial['iterations'] for trial in trials]
             trial_i_cue_entry = [trial['iCueEntry'] for trial in trials]
             trial_i_mem_entry = [trial['iMemEntry'] for trial in trials]
@@ -112,6 +114,9 @@ class VirmenDataInterface(BaseDataInterface):
             trial_i_blank = [trial['iBlank'] for trial in trials]
             trial_excess_travel = [trial['excessTravel'] for trial in trials]
 
+            nwbfile.add_trial_column(name='trial_id',
+                                     description='number of trial in block',
+                                     data=trial_idx)
             nwbfile.add_trial_column(name='duration',
                                      description='duration of trial in seconds',
                                      data=trial_durations)
