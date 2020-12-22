@@ -136,6 +136,14 @@ class VirmenDataInterface(BaseDataInterface):
                                      data=trial_excess_travel)
 
             # Processed cue timing and position
+            left_cue_presence = [trial['cueCombo'][0] for trial in trials]
+            left_cue_presence_data, left_cue_presence_indices = create_indexed_array(
+                left_cue_presence)
+
+            right_cue_presence = [trial['cueCombo'][1] for trial in trials]
+            right_cue_presence_data, right_cue_presence_indices = create_indexed_array(
+                right_cue_presence)
+
             left_cue_onsets = [
                 trial['start'] + epoch_start_nwb[0] + trial['time'][trial['cueOnset'][0] - 1]
                 if np.any(trial['cueOnset'][0]) else trial['cueOnset'][0] for trial in trials]
@@ -163,6 +171,16 @@ class VirmenDataInterface(BaseDataInterface):
             right_cue_positions = [trial['cuePos'][1] for trial in trials]
             right_cue_position_data, right_cue_position_indices = create_indexed_array(
                 right_cue_positions)
+
+            nwbfile.add_trial_column(name='left_cue_presence',
+                                     description='indicates whether the nth cue appeared on the left',
+                                     index=left_cue_presence_indices,
+                                     data=left_cue_presence_data)
+
+            nwbfile.add_trial_column(name='right_cue_presence',
+                                     description='indicates whether the nth cue appeared on the right',
+                                     index=right_cue_presence_indices,
+                                     data=right_cue_presence_data)
 
             nwbfile.add_trial_column(name='left_cue_onset',
                                      description='onset times of left cues',
@@ -202,6 +220,7 @@ class VirmenDataInterface(BaseDataInterface):
             pos_data = np.empty((0, 2))
             velocity_data = np.empty_like(pos_data)
             view_angle_data = []
+            collision = []
             for trial in trials:
                 trial_total_time = trial['start'] + epoch_start_nwb[0] + trial['time']
                 timestamps.extend(trial_total_time.astype(np.float64, casting='same_kind'))
@@ -210,10 +229,17 @@ class VirmenDataInterface(BaseDataInterface):
                 trial_position = trial['position'][:, :-1]
                 trial_velocity = trial['velocity'][:, :-1]
                 trial_view_angle = trial['position'][:, -1]
+                trial_collision = trial['collision']
                 pos_data = np.concatenate([pos_data, trial_position, padding], axis=0)
                 velocity_data = np.concatenate([velocity_data, trial_velocity, padding], axis=0)
                 view_angle_data = np.concatenate([view_angle_data, trial_view_angle,
                                                   padding[:, 0]], axis=0)
+                collision = np.concatenate([collision, trial_collision, padding[:, 0]], axis=0)
+            time = TimeSeries(name='Time',
+                              data=H5DataIO(timestamps, compression="gzip"),
+                              unit='s',
+                              resolution=np.nan,
+                              timestamps=H5DataIO(timestamps, compression="gzip"))
             pos_obj.add_spatial_series(
                 SpatialSeries(
                     name="SpatialSeries",
@@ -238,8 +264,17 @@ class VirmenDataInterface(BaseDataInterface):
                     timestamps=H5DataIO(timestamps, compression="gzip")
                 )
             )
+            collision_ts = TimeSeries(name='Collision',
+                                      data=H5DataIO(collision, compression="gzip"),
+                                      unit='bool',
+                                      resolution=np.nan,
+                                      timestamps=H5DataIO(timestamps, compression="gzip"),
+                                      description='boolean to indicate for each frame'
+                                                  ' whether collision was detected')
             behavioral_processing_module = check_module(nwbfile, 'behavior',
                                                         'contains processed behavioral data')
             behavioral_processing_module.add_data_interface(pos_obj)
             behavioral_processing_module.add_data_interface(velocity_ts)
             behavioral_processing_module.add_data_interface(view_angle_obj)
+            behavioral_processing_module.add_data_interface(time)
+            behavioral_processing_module.add_data_interface(collision_ts)
