@@ -11,6 +11,8 @@ from pynwb.behavior import SpatialSeries, Position, CompassDirection
 
 from ..utils import check_module, convert_mat_file_to_dict, array_to_dt, create_indexed_array
 
+epoch_reward_multiplier = []
+
 
 class VirmenDataInterface(BaseDataInterface):
     """Description here."""
@@ -142,6 +144,10 @@ class VirmenDataInterface(BaseDataInterface):
                                      description='total distance traveled during the trial '
                                                  'normalized to the length of the maze',
                                      data=trial_excess_travel)
+            if epoch_reward_multiplier:
+                nwbfile.add_epoch_column(name='reward_scale',
+                                         description='multiplier of reward for each correct trial',
+                                         data=epoch_reward_multiplier)
 
             # Processed cue timing and position
             left_cue_presence = [trial['cueCombo'][0] for trial in trials]
