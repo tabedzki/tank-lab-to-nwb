@@ -122,3 +122,19 @@ def create_indexed_array(ndarray):
     array_indices = np.cumsum(array_indices, dtype=np.uint64)
 
     return flat_array, array_indices
+
+
+def flatten_nested_dict(nested_dict):
+    """Recursively flattens a nested dictionary."""
+    flatten_dict = {}
+    for k, v in nested_dict.items():
+        if isinstance(v, dict):
+            if v:
+                flatten_sub_dict = flatten_nested_dict(v).items()
+                flatten_dict.update({k2: v2 for k2, v2 in flatten_sub_dict})
+            else:
+                flatten_dict[k] = np.array([])
+        else:
+            flatten_dict[k] = v
+
+    return flatten_dict

@@ -7,7 +7,7 @@ from isodate import duration_isoformat
 from nwb_conversion_tools import NWBConverter, SpikeGLXRecordingInterface
 
 from .virmenbehaviordatainterface import VirmenDataInterface
-from ..utils import convert_mat_file_to_dict, flatten_nested_dict
+from ..utils import convert_mat_file_to_dict, flatten_nested_dict, array_to_dt
 from ndx_tank_metadata import LabMetaDataExtension, RigExtension, MazeExtension
 
 
@@ -51,18 +51,18 @@ class TowersRawNWBConverter(NWBConverter):
             )
 
             # Add lab metadata
-            rig_extension = RigExtension(name='rig',
-                                         **{k: str(v) for k, v in
-                                            experiment_metadata['rig'].items()})
+            rig_extension = RigExtension(name='rig', **experiment_metadata['rig'])
 
             maze_extension = MazeExtension(name='mazes',
                                            description='description of the mazes')
 
-            for maze_ind, maze in enumerate(experiment_metadata['mazes']):
-                mazes_dict = {k: [str(flatten_nested_dict(maze)[k])] for k in
-                                  maze_extension.colnames}
-                maze_extension.add_row(**mazes_dict, id=maze_ind)
+            for maze in experiment_metadata['mazes']:
+                flatten_maze_dict = flatten_nested_dict(maze)
+                maze_extension.add_row(**flatten_maze_dict)
 
+            num_trials = len(
+                    [trial for epoch in session_data['log']['block'] for trial in epoch['trial']])
+            session_end = array_to_dt(session_data['log']['session']['end']).isoformat()
             lab_meta_data = dict(
                 name='LabMetaData',
                 experiment_name='enter experiment name',
@@ -72,6 +72,8 @@ class TowersRawNWBConverter(NWBConverter):
                     'stimulusBank'] else '',
                 commit_id=experiment_metadata['repository'],
                 location=experiment_metadata['rig']['rig'],
+                num_trials=num_trials,
+                session_end_time=session_end,
                 rig=rig_extension,
                 mazes=maze_extension,
                 # session_performance=0.,  # comment out to add (not in behavior file)
