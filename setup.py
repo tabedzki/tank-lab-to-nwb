@@ -20,6 +20,5 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     package_data={'': ['*.yml', '*.json']},
-    install_requires=install_requires,
-    dependency_links=["-e git+git://github.com/catalystneuro/ndx-tank-metadata.git"],
+    install_requires=install_requires
 )
