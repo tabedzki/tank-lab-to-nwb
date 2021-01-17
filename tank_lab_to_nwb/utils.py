@@ -1,4 +1,9 @@
 """Authors: Ben Dichter, Cody Baker."""
+import os
+import sys
+from pathlib import Path
+from shutil import which
+
 import numpy as np
 from datetime import datetime
 from scipy.io import loadmat, matlab
@@ -138,3 +143,60 @@ def flatten_nested_dict(nested_dict):
             flatten_dict[k] = v
 
     return flatten_dict
+
+
+def convert_function_handle_to_str(mat_file_path):
+    """Executes a matlab script which converts function handle values to str
+     if matlab is installed on the system."""
+    matlab_code = '''
+    str_func = char(log.version.code);
+    code_version = 'code_version.txt';
+    fid = fopen(code_version, 'wt');
+    fprintf(fid, str_func);
+
+    str_func = char(log.animal.protocol);
+    protocol = 'protocol.txt';
+    fid = fopen(protocol, 'wt');
+    fprintf(fid, str_func);
+    quit;
+    '''
+    
+    metadata = {}
+    convert_script_code = f"filePath = '{mat_file_path}';\nload(filePath);{matlab_code}"
+    convert_script_path = Path("convert_function_to_txt.m")
+
+    with convert_script_path.open('w') as f:
+        f.write(convert_script_code)
+
+    if 'win' in sys.platform and sys.platform != 'darwin':
+        matlab_cmd = '''
+                     #!/bin/bash
+                     matlab -nosplash -wait -log -r convert_function_to_txt
+                     '''
+    else:
+        matlab_cmd = '''
+                     #!/bin/bash
+                     matlab -nosplash -nodisplay -log -r convert_function_to_txt
+                     '''
+
+    if which('matlab') is not None:
+        try:
+            os.system(matlab_cmd)
+        
+            with open("code_version.txt", "r") as f:
+                version = f.readline()
+            with open("protocol.txt", "r") as f:
+                protocol = f.readline()
+            
+            metadata['experiment_name'] = version
+            metadata['protocol_name'] = protocol
+
+            os.remove("code_version.txt")
+            os.remove("protocol.txt")
+        
+        except Exception as e:
+            print(f"There was an error while trying to execute {convert_script_path}:\n{e}")
+
+    os.remove("convert_function_to_txt.m")
+
+    return metadata
