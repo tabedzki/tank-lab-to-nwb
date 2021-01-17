@@ -8,8 +8,10 @@ from nwb_conversion_tools.basedatainterface import BaseDataInterface
 from nwb_conversion_tools.utils import get_base_schema, get_schema_from_hdmf_class
 from pynwb import NWBFile, TimeSeries
 from pynwb.behavior import SpatialSeries, Position, CompassDirection
+from ndx_tank_metadata import LabMetaDataExtension, RigExtension, MazeExtension
 
-from ..utils import check_module, convert_mat_file_to_dict, array_to_dt, create_indexed_array
+from ..utils import check_module, convert_mat_file_to_dict, array_to_dt, create_indexed_array, \
+    flatten_nested_dict, convert_function_handle_to_str
 
 epoch_reward_multiplier = []
 
@@ -42,9 +44,6 @@ class VirmenDataInterface(BaseDataInterface):
         matin = convert_mat_file_to_dict(mat_file)
         session_start_time = array_to_dt(matin['log']['session']['start'])
 
-        # Extension of lab metadata
-        nwbfile.add_lab_meta_data(metadata['lab_meta_data'])
-
         # Intervals
         if Path(mat_file).is_file():
             nwbfile.add_epoch_column('label', 'name of epoch')
@@ -53,6 +52,41 @@ class VirmenDataInterface(BaseDataInterface):
                 epochs = [matin['log']['block']]
             else:
                 epochs = matin['log']['block']
+
+            # Extension of lab metadata
+            experiment_metadata = matin['log']['version']
+            subject_metadata = matin['log']['animal']
+            rig_extension = RigExtension(name='rig', **experiment_metadata['rig'])
+
+            maze_extension = MazeExtension(name='mazes',
+                                           description='description of the mazes')
+
+            for maze in experiment_metadata['mazes']:
+                flatten_maze_dict = flatten_nested_dict(maze)
+                maze_extension.add_row(**flatten_maze_dict)
+
+            num_trials = len([trial for epoch in epochs for trial in epoch['trial']])
+            session_end_time = array_to_dt(matin['log']['session']['end']).isoformat()
+            converted_metadata = convert_function_handle_to_str(mat_file_path=mat_file)
+            lab_meta_data = dict(
+                name='LabMetaData',
+                experiment_name=converted_metadata[
+                    'experiment_name'] if 'experiment_name' in converted_metadata else '',
+                world_file_name=experiment_metadata['name'],
+                protocol_name=converted_metadata[
+                    'protocol_name'] if 'protocol_name' in converted_metadata else '',
+                stimulus_bank_path=subject_metadata['stimulusBank'] if subject_metadata[
+                    'stimulusBank'] else '',
+                commit_id=experiment_metadata['repository'],
+                location=experiment_metadata['rig']['rig'],
+                num_trials=num_trials,
+                session_end_time=session_end_time,
+                rig=rig_extension,
+                mazes=maze_extension,
+                # session_performance=0.,  # comment out to add (not in behavior file)
+            )
+            metadata['lab_meta_data'] = LabMetaDataExtension(**lab_meta_data)
+            nwbfile.add_lab_meta_data(metadata['lab_meta_data'])
 
             epoch_start_dts = [array_to_dt(epoch['start']) for epoch in epochs]
             epoch_durations_dts = [timedelta(seconds=epoch['duration']) for epoch in epochs]
