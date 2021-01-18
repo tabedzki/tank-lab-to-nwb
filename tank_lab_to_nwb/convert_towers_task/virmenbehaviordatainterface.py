@@ -13,8 +13,6 @@ from ndx_tank_metadata import LabMetaDataExtension, RigExtension, MazeExtension
 from ..utils import check_module, convert_mat_file_to_dict, array_to_dt, create_indexed_array, \
     flatten_nested_dict, convert_function_handle_to_str
 
-epoch_reward_multiplier = []
-
 
 class VirmenDataInterface(BaseDataInterface):
     """Description here."""
@@ -149,6 +147,7 @@ class VirmenDataInterface(BaseDataInterface):
             trial_i_arm_entry = [trial['iArmEntry'] for trial in trials]
             trial_i_blank = [trial['iBlank'] for trial in trials]
             trial_excess_travel = [trial['excessTravel'] for trial in trials]
+            trial_reward_scale = [trial['rewardScale'] for trial in trials]
 
             nwbfile.add_trial_column(name='trial_id',
                                      description='number of trial in block',
@@ -178,10 +177,9 @@ class VirmenDataInterface(BaseDataInterface):
                                      description='total distance traveled during the trial '
                                                  'normalized to the length of the maze',
                                      data=trial_excess_travel)
-            if epoch_reward_multiplier:
-                nwbfile.add_epoch_column(name='reward_scale',
-                                         description='multiplier of reward for each correct trial',
-                                         data=epoch_reward_multiplier)
+            nwbfile.add_trial_column(name='reward_scale',
+                                     description='multiplier of reward for each correct trial',
+                                     data=trial_reward_scale)
 
             # Processed cue timing and position
             left_cue_presence = [trial['cueCombo'][0] for trial in trials]
