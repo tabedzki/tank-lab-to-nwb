@@ -153,11 +153,38 @@ def convert_function_handle_to_str(mat_file_path):
     code_version = 'code_version.txt';
     fid = fopen(code_version, 'wt');
     fprintf(fid, str_func);
+    fclose(fid);
 
     str_func = char(log.animal.protocol);
     protocol = 'protocol.txt';
     fid = fopen(protocol, 'wt');
     fprintf(fid, str_func);
+    fclose(fid);
+    
+    choice_data = [];
+    for i = 1 : size(log.block, 2)
+        for j = 1 : size(log.block(i).trial, 2)
+            choice_data = [choice_data; string(log.block(i).trial(j).choice)];
+        end
+    end
+    
+    choice = 'trial_choice.txt';
+    fid = fopen(choice, 'wt');
+    fprintf(fid,'%s\n', choice_data);
+    fclose(fid);
+    
+    trial_type_data = [];
+    for i = 1 : size(log.block, 2)
+        for j = 1 : size(log.block(i).trial, 2)
+            trial_type_data = [trial_type_data; string(log.block(i).trial(j).trialType)];
+        end
+    end
+    
+    trial_type = 'trial_type.txt';
+    fid = fopen(trial_type, 'wt');
+    fprintf(fid,'%s\n', trial_type_data);
+    fclose(fid);
+    
     quit;
     '''
     
@@ -187,18 +214,26 @@ def convert_function_handle_to_str(mat_file_path):
                 version = f.readline()
             with open("protocol.txt", "r") as f:
                 protocol = f.readline()
-            
+            with open("trial_choice.txt", "r") as f:
+                trial_choice = f.read().splitlines()
+            with open("trial_type.txt", "r") as f:
+                trial_type = f.read().splitlines()
+
             metadata['experiment_name'] = version
             metadata['protocol_name'] = protocol
+            metadata['trial_choice'] = trial_choice
+            metadata['trial_type'] = trial_type
 
             os.remove("code_version.txt")
             os.remove("protocol.txt")
-        
+            os.remove("trial_choice.txt")
+            os.remove("trial_type.txt")
+
         except Exception as e:
             print(f"There was an error while trying to execute {convert_script_path}:\n{e}")
     else:
         print("A working matlab version was not found. "
-              "The code version and animal protocol could not be saved to NWB.")
+              "Code version, animal protocol, type of trial, and choice could not be saved to NWB.")
 
     os.remove("convert_function_to_txt.m")
 
