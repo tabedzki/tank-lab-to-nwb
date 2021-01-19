@@ -180,6 +180,14 @@ class VirmenDataInterface(BaseDataInterface):
             nwbfile.add_trial_column(name='reward_scale',
                                      description='multiplier of reward for each correct trial',
                                      data=trial_reward_scale)
+            if 'trial_choice' in converted_metadata:
+                nwbfile.add_trial_column(name='choice',
+                                         description='choice (L=Left,R=Right,nil=Trial violation)',
+                                         data=converted_metadata['trial_choice'])
+            if 'trial_type' in converted_metadata:
+                nwbfile.add_trial_column(name='trial_type',
+                                         description='type of trial (L=Left,R=Right)',
+                                         data=converted_metadata['trial_type'])
 
             # Processed cue timing and position
             left_cue_presence = [trial['cueCombo'][0] for trial in trials]
