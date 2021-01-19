@@ -148,7 +148,42 @@ def flatten_nested_dict(nested_dict):
 def convert_function_handle_to_str(mat_file_path):
     """Executes a matlab script which converts function handle values to str
      if matlab is installed on the system."""
-    matlab_code = '''
+    matlab_class = '''
+    classdef Choice < uint32
+  
+        enumeration
+            L(1)
+            R(2)
+            nil(inf)
+        end
+  
+        methods (Static)
+            function choices = all()
+                choices = enumeration('Choice')';
+                choices = choices(1:end-1);
+            end
+    
+            function num = count()
+                num = numel(enumeration('Choice'));
+            end
+        end
+  
+        methods
+            function opp = opposite(obj)
+                numValues   = numel(Choice.all());
+                assert(numValues == 2);     % the concept of "opposite" only works for sets of 2
+      
+                flipped     = double(obj);
+                flipped     = numValues+1 - flipped;
+                opp         = obj;
+                sel         = opp >= 1 & opp <= numValues;
+                opp(sel)    = flipped(sel);
+            end
+        end
+  
+    end
+    '''
+    matlab_code = r'''
     str_func = char(log.version.code);
     code_version = 'code_version.txt';
     fid = fopen(code_version, 'wt');
@@ -187,7 +222,10 @@ def convert_function_handle_to_str(mat_file_path):
     
     quit;
     '''
-    
+
+    with Path('Choice.m').open('w') as f:
+        f.write(matlab_class)
+
     metadata = {}
     convert_script_code = f"filePath = '{mat_file_path}';\nload(filePath);{matlab_code}"
     convert_script_path = Path("convert_function_to_txt.m")
@@ -235,6 +273,7 @@ def convert_function_handle_to_str(mat_file_path):
         print("A working matlab version was not found. "
               "Code version, animal protocol, type of trial, and choice could not be saved to NWB.")
 
+    os.remove("Choice.m")
     os.remove("convert_function_to_txt.m")
 
     return metadata
