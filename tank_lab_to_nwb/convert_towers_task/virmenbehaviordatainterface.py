@@ -54,14 +54,25 @@ class VirmenDataInterface(BaseDataInterface):
             # Extension of lab metadata
             experiment_metadata = matin['log']['version']
             subject_metadata = matin['log']['animal']
-            rig_extension = RigExtension(name='rig', **experiment_metadata['rig'])
+
+            rig_atrr = ['rig', 'simulationMode', 'hasDAQ', 'hasSyncComm', 'minIterationDT',
+                        'arduinoPort', 'sensorDotsPerRev', 'ballCircumference', 'toroidXFormP1',
+                        'toroidXFormP2', 'colorAdjustment', 'soundAdjustment', 'nidaqDevice',
+                        'nidaqPort', 'nidaqLines', 'syncClockChannel', 'syncDataChannel',
+                        'rewardChannel', 'rewardSize', 'rewardDuration', 'laserChannel',
+                        'rightPuffChannel', 'leftPuffChannel', 'webcam_name']
+            rig_extension = RigExtension(name='rig',
+                                         **dict(
+                                             (k, v) for k, v in experiment_metadata['rig'].items()
+                                             if k in rig_atrr))
 
             maze_extension = MazeExtension(name='mazes',
                                            description='description of the mazes')
 
             for maze in experiment_metadata['mazes']:
                 flatten_maze_dict = flatten_nested_dict(maze)
-                maze_extension.add_row(**flatten_maze_dict)
+                maze_extension.add_row(**dict((k, v) for k, v in flatten_maze_dict.items()
+                                              if k in MazeExtension.mazes_attr))
 
             num_trials = len([trial for epoch in epochs for trial in epoch['trial']])
             session_end_time = array_to_dt(matin['log']['session']['end']).isoformat()
