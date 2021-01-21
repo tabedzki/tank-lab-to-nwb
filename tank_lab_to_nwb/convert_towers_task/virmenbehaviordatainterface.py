@@ -163,34 +163,22 @@ class VirmenDataInterface(BaseDataInterface):
             nwbfile.add_trial_column(name='trial_id',
                                      description='number of trial in block',
                                      data=trial_idx)
-            nwbfile.add_trial_column(name='duration',
-                                     description='duration of trial in seconds',
-                                     data=trial_durations)
-            nwbfile.add_trial_column(name='iterations',
-                                     description='number of iterations (frames) for entire trial',
-                                     data=trial_iterations)
-            nwbfile.add_trial_column(name='i_cue_entry',
-                                     description='iteration number when subject entered cue region',
-                                     data=trial_i_cue_entry)
-            nwbfile.add_trial_column(name='i_mem_entry',
-                                     description='iteration number when subject entered memory region',
-                                     data=trial_i_mem_entry)
-            nwbfile.add_trial_column(name='i_turn_entry',
-                                     description='iteration number when subject entered turn region',
-                                     data=trial_i_turn_entry)
-            nwbfile.add_trial_column(name='i_arm_entry',
-                                     description='iteration number when subject entered arm region',
-                                     data=trial_i_arm_entry)
-            nwbfile.add_trial_column(name='i_blank',
-                                     description='iteration number when screen is turned off',
-                                     data=trial_i_blank)
-            nwbfile.add_trial_column(name='excess_travel',
-                                     description='total distance traveled during the trial '
-                                                 'normalized to the length of the maze',
-                                     data=trial_excess_travel)
-            nwbfile.add_trial_column(name='reward_scale',
-                                     description='multiplier of reward for each correct trial',
-                                     data=trial_reward_scale)
+            trial_columns = [('iterations', 'number of iterations (frames) for entire trial'),
+                             ('iCueEntry', 'iteration number when subject entered cue region'),
+                             ('iMemEntry', 'iteration number when subject entered memory region'),
+                             ('iTurnEntry', 'iteration number when subject entered turn region'),
+                             ('iArmEntry', 'iteration number when subject entered arm region'),
+                             ('iBlank', 'iteration number when screen is turned off'),
+                             ('excessTravel', 'total distance traveled during the trial '
+                                              'normalized to the length of the maze'),
+                             ('rewardScale', 'multiplier of reward for each correct trial')]
+            for column_name, desc in trial_columns:
+                data = [trial[column_name] for trial in trials if column_name in trial]
+                if data:
+                    nwbfile.add_trial_column(name=column_name,
+                                             description=desc,
+                                             data=data)
+
             if 'trial_choice' in converted_metadata:
                 nwbfile.add_trial_column(name='choice',
                                          description='choice (L=Left,R=Right,nil=Trial violation)',
