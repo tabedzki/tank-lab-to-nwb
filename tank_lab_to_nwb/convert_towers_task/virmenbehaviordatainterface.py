@@ -51,6 +51,9 @@ class VirmenDataInterface(BaseDataInterface):
             else:
                 epochs = matin['log']['block']
 
+            trials = [trial for epoch in epochs for trial in epoch['trial'] if
+                      not np.isnan(trial['start'])]
+
             # Extension of lab metadata
             experiment_metadata = matin['log']['version']
             subject_metadata = matin['log']['animal']
@@ -74,7 +77,7 @@ class VirmenDataInterface(BaseDataInterface):
                 maze_extension.add_row(**dict((k, v) for k, v in flatten_maze_dict.items()
                                               if k in MazeExtension.mazes_attr))
 
-            num_trials = len([trial for epoch in epochs for trial in epoch['trial']])
+            num_trials = len(trials)
             session_end_time = array_to_dt(matin['log']['session']['end']).isoformat()
             converted_metadata = convert_function_handle_to_str(mat_file_path=mat_file)
             lab_meta_data = dict(
@@ -111,7 +114,14 @@ class VirmenDataInterface(BaseDataInterface):
             epoch_main_maze_ids = [epoch['mainMazeID'] for epoch in epochs]
             epoch_easy_flag = [epoch['easyBlockFlag'] for epoch in epochs]
             epoch_first_trial = [epoch['firstTrial'] for epoch in epochs]
-            epoch_num_trials = [epoch['trial'].shape[0] for epoch in epochs]
+            epoch_num_trials = []
+            for epoch in epochs:
+                num_non_empty_trials = 0
+                for trial in epoch['trial']:
+                    if not np.isnan(trial['start']):
+                        num_non_empty_trials += 1
+                epoch_num_trials.append(num_non_empty_trials)
+
             epoch_durations = [epoch['duration'] for epoch in epochs]
             epoch_reward_mil = [epoch['rewardMiL'] for epoch in epochs]
             epoch_stimulus_config = [epoch['stimulusConfig'] for epoch in epochs]
@@ -141,7 +151,6 @@ class VirmenDataInterface(BaseDataInterface):
                                      description='stimulus configuration number',
                                      data=epoch_stimulus_config)
 
-            trials = [trial for epoch in epochs for trial in epoch['trial']]
             trial_starts = [trial['start'] + epoch_start_nwb[0] for trial in trials]
             trial_durations = [trial['duration'] for trial in trials]
             trial_ends = [start_time + duration for start_time, duration in
@@ -149,17 +158,11 @@ class VirmenDataInterface(BaseDataInterface):
             for k in range(len(trial_starts)):
                 nwbfile.add_trial(start_time=trial_starts[k], stop_time=trial_ends[k])
 
-            trial_idx = [trial_id for epoch in epochs
-                         for trial_id in np.arange(0, epoch['trial'].shape[0])]
-            trial_iterations = [trial['iterations'] for trial in trials]
-            trial_i_cue_entry = [trial['iCueEntry'] for trial in trials]
-            trial_i_mem_entry = [trial['iMemEntry'] for trial in trials]
-            trial_i_turn_entry = [trial['iTurnEntry'] for trial in trials]
-            trial_i_arm_entry = [trial['iArmEntry'] for trial in trials]
-            trial_i_blank = [trial['iBlank'] for trial in trials]
-            trial_excess_travel = [trial['excessTravel'] for trial in trials]
-            trial_reward_scale = [trial['rewardScale'] for trial in trials]
-
+            nwbfile.add_trial_column(name='duration',
+                                     description='duration of trial in seconds',
+                                     data=trial_durations)
+            trial_idx = [trial_id for num_trials in epoch_num_trials
+                         for trial_id in np.arange(0, num_trials)]
             nwbfile.add_trial_column(name='trial_id',
                                      description='number of trial in block',
                                      data=trial_idx)
