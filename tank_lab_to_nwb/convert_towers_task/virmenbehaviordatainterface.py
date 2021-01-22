@@ -192,11 +192,13 @@ class VirmenDataInterface(BaseDataInterface):
                                          data=converted_metadata['trial_type'])
 
             # Processed cue timing and position
-            left_cue_presence = [trial['cueCombo'][0] for trial in trials]
+            left_cue_presence = [trial['cueCombo'][0] if len(trial['cueCombo'])
+                                 else trial['cueCombo'] for trial in trials]
             left_cue_presence_data, left_cue_presence_indices = create_indexed_array(
                 left_cue_presence)
 
-            right_cue_presence = [trial['cueCombo'][1] for trial in trials]
+            right_cue_presence = [trial['cueCombo'][1] if len(trial['cueCombo'])
+                                  else trial['cueCombo'] for trial in trials]
             right_cue_presence_data, right_cue_presence_indices = create_indexed_array(
                 right_cue_presence)
 
@@ -220,11 +222,13 @@ class VirmenDataInterface(BaseDataInterface):
                 if np.any(trial['cueOffset'][1]) else trial['cueOffset'][1] for trial in trials]
             right_cue_offset_data, right_cue_offset_indices = create_indexed_array(right_cue_offsets)
 
-            left_cue_positions = [trial['cuePos'][0] for trial in trials]
+            left_cue_positions = [trial['cuePos'][0] if len(trial['cuePos'])
+                                  else trial['cuePos'] for trial in trials]
             left_cue_position_data, left_cue_position_indices = create_indexed_array(
                 left_cue_positions)
 
-            right_cue_positions = [trial['cuePos'][1] for trial in trials]
+            right_cue_positions = [trial['cuePos'][1] if len(trial['cuePos'])
+                                   else trial['cuePos'] for trial in trials]
             right_cue_position_data, right_cue_position_indices = create_indexed_array(
                 right_cue_positions)
 
