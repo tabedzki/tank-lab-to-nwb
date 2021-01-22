@@ -20,5 +20,5 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     package_data={'': ['*.yml', '*.json']},
-    install_requires=install_requires,
+    install_requires=install_requires
 )
