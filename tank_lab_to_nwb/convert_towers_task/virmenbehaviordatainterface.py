@@ -64,10 +64,10 @@ class VirmenDataInterface(BaseDataInterface):
                         'nidaqPort', 'nidaqLines', 'syncClockChannel', 'syncDataChannel',
                         'rewardChannel', 'rewardSize', 'rewardDuration', 'laserChannel',
                         'rightPuffChannel', 'leftPuffChannel', 'webcam_name']
-            rig_extension = RigExtension(name='rig',
-                                         **dict(
-                                             (k, v) for k, v in experiment_metadata['rig'].items()
-                                             if k in rig_atrr))
+            rig = dict((k, v) for k, v in experiment_metadata['rig'].items() if k in rig_atrr)
+            rig.update((k, v.astype(np.int32)) for k, v in rig.items() if
+                       isinstance(v, np.ndarray) and v.dtype == np.uint8)
+            rig_extension = RigExtension(name='rig', **rig)
 
             maze_extension = MazeExtension(name='mazes',
                                            description='description of the mazes')
