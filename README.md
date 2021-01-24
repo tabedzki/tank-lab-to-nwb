@@ -87,7 +87,7 @@ Location in Virmen (.mat) file  | Location in NWB file | Description
  [not in file] | `nwb.sex`| information about the sex of the subject (optional)
 
 ### LabMetaData
-The lap specific metadata is populated in `tank_lab_to_nwb/convert_towers_task/virmenbehaviordatainterface.py`
+The lab specific metadata is populated in `tank_lab_to_nwb/convert_towers_task/virmenbehaviordatainterface.py`
 using the custom extension [ndx-tank-metadata](https://github.com/catalystneuro/ndx-tank-metadata) 
 built for extending the NWB LabMetaData schema with the required fields:
 
