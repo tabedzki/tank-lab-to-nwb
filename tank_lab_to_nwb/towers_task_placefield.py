@@ -8,8 +8,8 @@ from ipywidgets import BoundedFloatText, Dropdown, Checkbox
 
 class TowersTaskPlaceFieldWidget(PlaceFieldWidget):
 
-    def get_pixel_width(self):
-        self.pixel_width = [(np.nanmax(self.pos[:,0]) - np.nanmin(self.pos[:,0])) / 1000, int(1)]
+    def get_pixel_width(self, bin_num):
+        self.pixel_width = [(np.nanmax(self.pos[:,0]) - np.nanmin(self.pos[:,0])) / bin_num, int(1)]
 
     def get_position(self, spatial_series):
         self.pos, self.unit = get_timeseries_in_units(spatial_series)
@@ -43,19 +43,23 @@ class TowersTaskPlaceFieldWidget(PlaceFieldWidget):
         style = {'description_width': 'initial'}
         bft_gaussian_x = BoundedFloatText(value=0.0184, min=0, max=99999, description='gaussian sd x (cm)', style=style)
         bft_gaussian_y = BoundedFloatText(value=0, min=0, max=99999, description='gaussian sd y (cm)', style=style)
+        bft_bin_num = BoundedFloatText(value=15, min=0, max=99999, description='number of bins', style=style)
         bft_speed = BoundedFloatText(value=0.03, min=0, max=99999, description='speed threshold (m/s)', style=style)
         dd_unit_select = Dropdown(options=np.arange(len(self.units)), description='unit')
         cb_velocity = Checkbox(value=False, description='use velocity', indent=False, disabled=True)
 
-        return bft_gaussian_x, bft_gaussian_y, bft_speed, dd_unit_select, cb_velocity
+        return bft_gaussian_x, bft_gaussian_y, bft_bin_num, bft_speed, dd_unit_select, cb_velocity
 
 
-    def do_rate_map(self, index=0, speed_thresh=0.03, gaussian_sd_x=0.0184, gaussian_sd_y=0.0184, use_velocity=False):
-        occupancy, filtered_firing_rate, [edges_x, edges_y] = self.compute_twodim_firing_rate(index=index,
-                                                                                         speed_thresh=speed_thresh,
-                                                                                         gaussian_sd_x=gaussian_sd_x,
-                                                                                         gaussian_sd_y=gaussian_sd_y,
-                                                                                         use_velocity=use_velocity)
+    def do_rate_map(self, index=0, speed_thresh=0.03, gaussian_sd_x=0.0184, gaussian_sd_y=0.0184, bin_num=15,
+                    use_velocity=False):
+        self.get_pixel_width(bin_num)
+        occupancy, filtered_firing_rate, [edges_x, edges_y] = self.compute_twodim_firing_rate(self.pixel_width[0],
+                                                                                              index=index,
+                                                                                              speed_thresh=speed_thresh,
+                                                                                              gaussian_sd_x=gaussian_sd_x,
+                                                                                              gaussian_sd_y=gaussian_sd_y,
+                                                                                              use_velocity=use_velocity)
 
 
         fig, ax = plt.subplots(figsize=(10, 10))
