@@ -1,20 +1,25 @@
 """Authors: Cody Baker and Ben Dichter."""
-from datetime import timedelta
 from pathlib import Path
+from typing import Optional, Union
+import numpy as np
+from datetime import datetime
 
-from dateutil.parser import parse as dateparse
-from isodate import duration_isoformat
-from nwb_conversion_tools import NWBConverter, SpikeGLXRecordingInterface
+from nwb_conversion_tools import NWBConverter, SpikeGLXRecordingInterface, SpikeGLXLFPInterface
+import spikeextractors as se
+from pynwb import NWBHDF5IO
 
 from .virmenbehaviordatainterface import VirmenDataInterface
 from ..utils import convert_mat_file_to_dict
 
+OptionalArrayType = Optional[Union[list, np.ndarray]]
 
-class TowersRawNWBConverter(NWBConverter):
-    """Secondary conversion class for the Towers task; does not sychronize with ttl or write spiking output."""
+
+class TowersNWBConverter(NWBConverter):
+    """Primary conversion class for the Tank lab Towers task processing pipeline."""
 
     data_interface_classes = dict(
         SpikeGLXRecording=SpikeGLXRecordingInterface,
+        SpikeGLXLFP=SpikeGLXLFPInterface,
         VirmenData=VirmenDataInterface,
     )
 
@@ -23,7 +28,7 @@ class TowersRawNWBConverter(NWBConverter):
         vermin_file_path = Path(self.data_interface_objects['VirmenData'].source_data['file_path'])
         session_id = vermin_file_path.stem
         date_text = [id_part for id_part in session_id.split('_') if id_part.isdigit()][0]
-        session_start = dateparse(date_text, yearfirst=True)
+        session_start = datetime.strptime(date_text, "%Y%m%d")
 
         metadata = super().get_metadata()
         metadata['NWBFile'].update(
@@ -32,20 +37,14 @@ class TowersRawNWBConverter(NWBConverter):
                 institution="Princeton",
                 lab="Tank"
         )
-        metadata.update(
-            Subject=dict(
-                species="Mus musculus"
-            )
-        )
 
         if vermin_file_path.is_file():
             session_data = convert_mat_file_to_dict(mat_file_name=vermin_file_path)
             subject_data = session_data['log']['animal']
-            age_in_iso_format = duration_isoformat(timedelta(weeks=subject_data['importAge']))
-
-            metadata['Subject'].update(
-                subject_id=subject_data['name'],
-                age=age_in_iso_format
+            metadata.update(
+                Subject=dict(
+                    subject_id=subject_data['name']
+                )
             )
         else:
             print(f"Warning: no subject file detected for session {session_id}!")
