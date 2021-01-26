@@ -2,16 +2,15 @@
 from pathlib import Path
 from typing import Optional, Union
 import numpy as np
-from datetime import datetime
 
 from nwb_conversion_tools import NWBConverter, SpikeGLXRecordingInterface, SpikeGLXLFPInterface
 import spikeextractors as se
-from pynwb import NWBHDF5IO
 
 from .virmenbehaviordatainterface import VirmenDataInterface
 from ..utils import convert_mat_file_to_dict
 
 OptionalArrayType = Optional[Union[list, np.ndarray]]
+PathType = Union[Path, str]
 
 
 class TowersNWBConverter(NWBConverter):
@@ -23,16 +22,38 @@ class TowersNWBConverter(NWBConverter):
         VirmenData=VirmenDataInterface,
     )
 
+    def __init__(self, source_data, ttl_source: PathType):
+        """
+        Initialize the NWBConverter object.
+
+        Parameters
+        ----------
+        ttl_source : PathType
+            Path to data file containing the TTL signals to use for synchronizing.
+        """
+        super().__init__(source_data=source_data)
+        recording = se.SpikeGLXRecordingExtractor(ttl_source)
+        ttl, states = recording.get_ttl_events()
+        rising_times = ttl[states == 1]
+
+        assert len(rising_times) > 0, f"No TTL events found in ttl_source file ({ttl_source})."
+        start_time = recording.frame_to_time(rising_times[0])
+
+        for interface_name in ['SpikeGLXRecording', 'SpikeGLXLFP']:
+            if interface_name in self.data_interface_objects:  # specified in source_data
+                interface_extractor = self.data_interface_objects[interface_name].recording_extractor
+                re_start_frame = int(interface_extractor.time_to_frame(start_time))
+                self.data_interface_objects[interface_name].recording_extractor = se.SubRecordingExtractor(
+                    parent_recording=interface_extractor,
+                    start_frame=re_start_frame
+                )
+
     def get_metadata(self):
-        """Auto-populate as much metadata as possible."""
         vermin_file_path = Path(self.data_interface_objects['VirmenData'].source_data['file_path'])
         session_id = vermin_file_path.stem
-        date_text = [id_part for id_part in session_id.split('_') if id_part.isdigit()][0]
-        session_start = datetime.strptime(date_text, "%Y%m%d")
 
         metadata = super().get_metadata()
         metadata['NWBFile'].update(
-                session_start_time=session_start.astimezone(),
                 session_id=session_id,
                 institution="Princeton",
                 lab="Tank"

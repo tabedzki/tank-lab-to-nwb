@@ -1,9 +1,7 @@
 """Authors: Alessio Buccino, Cody Baker, Szonja Weigl, and Ben Dichter."""
 from pathlib import Path
 from isodate import duration_isoformat
-from datetime import timedelta
-
-import spikeextractors as se
+from datetime import timedelta, datetime
 
 from tank_lab_to_nwb import TowersNWBConverter
 
@@ -11,17 +9,18 @@ from tank_lab_to_nwb import TowersNWBConverter
 base_path = Path("D:/Neuropixels/")
 
 # Name the NWBFile and point to the desired save path
-nwbfile_path = base_path / "TowersTask.nwb"
+nwbfile_path = base_path / "FullTesting.nwb"
 
 # Point to the various files for the conversion
-recording_folder = base_path / "Neuropixels" / "A256_bank1_2020_09_30" / "A256_bank1_2020_09_30_g0"
-raw_data_file = recording_folder / "A256_bank1_2020_09_30_g0_t0.imec0.ap.bin"
-raw_data_lfp_file = recording_folder / "A256_bank1_2020_09_30_g0_t0.imec0.lf.bin"
-virmen_file_path = base_path / "TowersTask" / "PoissonBlocksReboot_cohort1_VRTrain6_E75_T_20181105.mat"
+recording_folder = base_path / "ActualData" / "2021_01_15_E105" / "towersTask_g0" / "towersTask_g0_imec0"
+raw_data_file = recording_folder / "towersTask_g0_t0.imec0.ap.bin"
+raw_data_lfp_file = recording_folder / "towersTask_g0_t0.imec0.lf.bin"
+virmen_file_path = base_path / "ActualData" / "behavior" / "PoissonBlocksReboot4_cohort4_NPX_testuser_T25_T_20210115.mat"
 spikesorted_file_path = base_path / "Example.nwb"
 
 # Enter Session and Subject information here - uncomment any fields you want to include
 session_description = "Enter session description here."
+session_start = datetime(1970, 1, 1)  # (Year, Month, Day)
 
 subject_info = dict(
     description="Enter optional subject description here",
@@ -47,7 +46,10 @@ conversion_options = dict(
     SpikeGLXRecording=dict(stub_test=stub_test),
     SpikeGLXLFP=dict(stub_test=stub_test)
 )
-converter = TowersProcessedNWBConverter(source_data)
+converter = TowersNWBConverter(
+    source_data=source_data,
+    ttl_source=recording_folder / ".." / "towersTask_g0_t0.nidq.bin"
+)
 metadata = converter.get_metadata()
 metadata['NWBFile'].update(session_description=session_description)
 metadata['Subject'].update(subject_info)
@@ -56,15 +58,4 @@ converter.run_conversion(
     metadata=metadata,
     conversion_options=conversion_options,
     overwrite=True
-)
-
-spikesorted_data = se.NwbSortingExtractor(spikesorted_file_path)
-if stub_test:
-    spikesorted_data = se.SubSortingExtractor(parent_sorting=spikesorted_data, end_frame=5)
-se.NwbSortingExtractor.write_sorting(
-    sorting=spikesorted_data,
-    save_path=nwbfile_path,
-    overwriite=False,
-    skip_properties=['mda_max_channel'],  # depends heavily on which spikesorter was used
-    skip_features=['waveforms']  # also depends on if curation/post-processing was included
 )
