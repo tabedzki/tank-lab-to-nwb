@@ -17,24 +17,19 @@ respective sections of the conversion script. These include the file or
 folder locations of the data to be converted to NWB format, as well as several optional fields 
 such as Subject information (species/age/weight).
 
-After editing the conversion script `convert_towers_processed.py` with the proper path for Neuropixel and behavior data, 
+After editing the conversion script `convert_towers.py` with the proper path for Neuropixel and behavior data, 
 the conversion can be executed from the terminal:
 ```bash
 $ cd tank-lab-to-nwb
-$ python tank_lab_to_nwb/convert_towers_task/convert_towers_processed.py
+$ python tank_lab_to_nwb/convert_towers_task/convert_towers.py
 ```
 Alternatively, the conversion can be done using a custom tailored jupyter notebook `spikeinterface_pipeline.ipynb` 
 that can be launched from the terminal:
 ```bash
 $ jupyter notebook notebooks/spikeinterface_pipeline.ipynb 
 ```
-(2) The **secondary processing pipeline** does not synchronize with TTL nor writes the spiking output 
-to the NWB file.
-```bash
-$ cd tank-lab-to-nwb
-$ python tank_lab_to_nwb/convert_towers_task/convert_towers_raw.py
-```
-The NWBFile can be inspected by reading it from a python script:
+
+(2) The NWBFile can be inspected by reading it from a python script:
 ```python
 from pynwb import NWBHDF5IO
 
