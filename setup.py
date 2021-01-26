@@ -17,8 +17,9 @@ setup(
     long_description_content_type='text/markdown',
     author='Luiz Tauffer, Cody Baker Szonja Weigl, and Ben Dichter',
     email='ben.dichter@gmail.com',
+    url='https://github.com/catalystneuro/tank-lab-to-nwb',
     packages=find_packages(),
     include_package_data=True,
     package_data={'': ['*.yml', '*.json']},
-    install_requires=install_requires,
+    install_requires=install_requires
 )
