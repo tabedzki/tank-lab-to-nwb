@@ -3,6 +3,7 @@ notebook
 pynwb
 h5py
 isodate
+nwb-conversion-tools
 nwbwidgets
 ipywidgets
 ndx-tank-metadata

@@ -15,7 +15,7 @@ from ..utils import check_module, convert_mat_file_to_dict, array_to_dt, create_
 
 
 class VirmenDataInterface(BaseDataInterface):
-    """Description here."""
+    """Conversion class for Virmen behavioral data."""
 
     @classmethod
     def get_source_schema(cls):
