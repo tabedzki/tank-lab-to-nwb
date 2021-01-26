@@ -3,4 +3,6 @@ notebook
 pynwb
 h5py
 isodate
+nwbwidgets
+ipywidgets
 ndx-tank-metadata
