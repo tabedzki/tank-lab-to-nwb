@@ -11,12 +11,12 @@ with open('requirements.txt') as f:
 
 setup(
     name='tank_lab_to_nwb',
-    version='0.1.0',
+    version='0.2.0',
     description='NWB conversion scripts and tutorials.',
     long_description=long_description,
     long_description_content_type='text/markdown',
     author='Luiz Tauffer, Cody Baker Szonja Weigl, and Ben Dichter',
-    email='ben.dichter@gmail.com',
+    author_email='ben.dichter@gmail.com',
     url='https://github.com/catalystneuro/tank-lab-to-nwb',
     packages=find_packages(),
     include_package_data=True,
