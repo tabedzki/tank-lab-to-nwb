@@ -31,9 +31,7 @@ class VirmenDataInterface(BaseDataInterface):
         """Compile metadata schemas from each of the data interface objects."""
         metadata_schema = get_base_schema()
         metadata_schema['properties']['SpatialSeries'] = get_schema_from_hdmf_class(SpatialSeries)
-        required_fields = ['SpatialSeries']
-        for field in required_fields:
-            metadata_schema['required'].append(field)
+        metadata_schema['required'].append('SpatialSeries')
         return metadata_schema
 
     def run_conversion(self, nwbfile: NWBFile, metadata: dict):
