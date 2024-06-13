@@ -130,3 +130,6 @@ dmypy.json
 .idea/workspace.xml
 *.xml
 *.iml
+
+# NWB files
+*.nwb

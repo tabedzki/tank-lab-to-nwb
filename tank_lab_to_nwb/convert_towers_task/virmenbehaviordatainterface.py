@@ -17,6 +17,28 @@ from ..utils import check_module, convert_mat_file_to_dict, array_to_dt, create_
 class VirmenDataInterface(BaseDataInterface):
     """Conversion class for Virmen behavioral data."""
 
+    def __init__(
+        self,
+        file_path: FilePathType,
+        verbose: bool = True
+    ):
+        """
+        Parameters
+        ----------
+        file_path : FilePathType
+            Path to virman .mat file.
+        verbose : bool, default: True
+            Whether to output verbose text.
+        """
+
+        file_path = Path(file_path)
+        folder_path = file_path.parent
+        super().__init__(
+            file_path=file_path,
+            folder_path=folder_path,
+            verbose=verbose,
+        )
+
     @classmethod
     def get_source_schema(cls):
         """Compile input schemas from each of the data interface classes."""
