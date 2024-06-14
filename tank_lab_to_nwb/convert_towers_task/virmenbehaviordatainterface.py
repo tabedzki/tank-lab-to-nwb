@@ -4,8 +4,8 @@ from pathlib import Path
 
 import numpy as np
 from hdmf.backends.hdf5.h5_utils import H5DataIO
-from nwb_conversion_tools.basedatainterface import BaseDataInterface
-from nwb_conversion_tools.utils import get_base_schema, get_schema_from_hdmf_class
+from neuroconv.basedatainterface import BaseDataInterface
+from neuroconv.utils import get_base_schema, get_schema_from_hdmf_class
 from pynwb import NWBFile, TimeSeries
 from pynwb.behavior import SpatialSeries, Position, CompassDirection
 from ndx_tank_metadata import LabMetaDataExtension, RigExtension, MazeExtension
@@ -56,7 +56,7 @@ class VirmenDataInterface(BaseDataInterface):
         metadata_schema['required'].append('SpatialSeries')
         return metadata_schema
 
-    def run_conversion(self, nwbfile: NWBFile, metadata: dict):
+    def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict):
         """Primary conversion function for the custom Tank lab behavioral interface."""
         mat_file = self.source_data['file_path']
         matin = convert_mat_file_to_dict(mat_file)
@@ -87,6 +87,19 @@ class VirmenDataInterface(BaseDataInterface):
             rig = dict((k, v) for k, v in experiment_metadata['rig'].items() if k in rig_atrr)
             rig.update((k, v.astype(np.int32)) for k, v in rig.items() if
                        isinstance(v, np.ndarray) and v.dtype == np.uint8)
+
+            # Wrap the rig_attr sensorDorsPerRev in a list to match the expected format
+            if 'sensorDotsPerRev' in rig:
+                if isinstance(rig['sensorDotsPerRev'], (int, float)):
+                    rig['sensorDotsPerRev'] = [rig['sensorDotsPerRev']]
+
+            for maze in experiment_metadata["mazes"]:
+                for k, v in maze["criteria"].items():
+                    print(f"{k=}, {v=}")
+                    if k.startswith('warmup') and isinstance(v, np.ndarray) and len(v) == 0:
+                        print(f"inside {k=}, {v=}")
+                        maze["criteria"][k] = np.nan
+
             rig_extension = RigExtension(name='rig', **rig)
 
             maze_extension = MazeExtension(name='mazes',
@@ -228,7 +241,9 @@ class VirmenDataInterface(BaseDataInterface):
             left_cue_onset_data, left_cue_onset_indices = create_indexed_array(left_cue_onsets)
 
             right_cue_onsets = [
-                trial['start'] + epoch_start_nwb[0] + trial['time'][trial['cueOnset'][1] - 1]
+                trial['start']
+                + epoch_start_nwb[0]
+                + trial['time'][trial['cueOnset'][1] - 1]
                 if np.any(trial['cueOnset'][1]) else trial['cueOnset'][1] for trial in trials]
             right_cue_onset_data, right_cue_onset_indices = create_indexed_array(right_cue_onsets)
 
