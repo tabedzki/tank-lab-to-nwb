@@ -1,6 +1,7 @@
 """Authors: Cody Baker Szonja Weigl and Ben Dichter."""
 from datetime import timedelta, datetime
 from pathlib import Path
+from copy import deepcopy
 
 import warnings
 from typing import Optional
@@ -80,68 +81,36 @@ class VirmenDataInterface(BaseDataInterface):
             NWBFile=dict(experimenter=experimenter, session_start_time=session_start_time),
         )
 
-        metadata = dict_deep_update(metadata, metadata_from_mat_dict)
+        experiment_metadata = metadata['log']['version']
 
-
-
-        mat_file = self.source_data['file_path']
-
-    def add_lab_meta_data(self, nwbfile: NWBFile):
-        # Intervals
-        matin = self._mat_dict
-        nwbfile.add_epoch_column('label', 'name of epoch')
-
-        if isinstance(matin['log']['block'], dict):
-            epochs = [matin['log']['block']]
+        if isinstance(metadata['log']['block'], dict):
+            epochs = [metadata['log']['block']]
         else:
-            epochs = matin['log']['block']
+            epochs = metadata['log']['block']
 
         trials = [trial for epoch in epochs for trial in epoch['trial'] if
                     not np.isnan(trial['start'])]
 
         # Extension of lab metadata
-        experiment_metadata = matin['log']['version']
-        subject_metadata = matin['log']['animal']
-
+        experiment_metadata = metadata['log']['version']
+        subject_metadata = metadata['log']['animal']
         rig_atrr = ['rig', 'simulationMode', 'hasDAQ', 'hasSyncComm', 'minIterationDT',
                     'arduinoPort', 'sensorDotsPerRev', 'ballCircumference', 'toroidXFormP1',
                     'toroidXFormP2', 'colorAdjustment', 'soundAdjustment', 'nidaqDevice',
                     'nidaqPort', 'nidaqLines', 'syncClockChannel', 'syncDataChannel',
                     'rewardChannel', 'rewardSize', 'rewardDuration', 'laserChannel',
                     'rightPuffChannel', 'leftPuffChannel', 'webcam_name']
-        rig = dict((k, v) for k, v in experiment_metadata['rig'].items() if k in rig_atrr)
+
+        rig = {k: v for k, v in experiment_metadata['rig'].items() if k in rig_atrr}
         rig.update((k, v.astype(np.int32)) for k, v in rig.items() if
                     isinstance(v, np.ndarray) and v.dtype == np.uint8)
 
-        # Wrap the rig_attr sensorDorsPerRev in a list to match the expected format
-        if 'sensorDotsPerRev' in rig:
-            if isinstance(rig['sensorDotsPerRev'], (int, float)):
-                rig['sensorDotsPerRev'] = [rig['sensorDotsPerRev']]
-
-
-        # for x in experiment_metadata["mazes"]:
-        #     if isinstance(x["criteria"]["warmupNTrials"], np.ndarray):
-        #         x["criteria"]["warmupNTrials"] = 0
-
-        # experiment_metadata["mazes"] = [
-        #     {**x, "criteria": {**x["criteria"], "warmupNTrials": 0, "warmupMaze": float('NaN')}}
-        #     if isinstance(x["criteria"]["warmupNTrials"], np.ndarray) else x
-        #     for x in experiment_metadata["mazes"]
-        # ]
-
-        # experiment_metadata["mazes"] = [
-        #     {**maze, "criteria": {k: (np.nan if k.startswith('warmup') and isinstance(v, np.ndarray) and len(v) == 0 else v) for k, v in maze["criteria"].items()}}
-        #     for maze in experiment_metadata["mazes"]
-        # ]
-
-        # rig.update((k, v.astype(np.int32)) for k, v in rig.items() if
-        #            isinstance(v, np.ndarray) and v.dtype == np.uint8)
+        # Wrap the rig_attr sensorDorsPerRev in a list to match the expected format since sometimes it is a scalar
+        rig['sensorDotsPerRev'] = [rig['sensorDotsPerRev']] if 'sensorDotsPerRev' in rig and isinstance(rig['sensorDotsPerRev'], (int, float)) else rig.get('sensorDotsPerRev')
 
         for maze in experiment_metadata["mazes"]:
             for k, v in maze["criteria"].items():
-                print(f"{k=}, {v=}")
                 if k.startswith('warmup') and isinstance(v, np.ndarray) and len(v) == 0:
-                    print(f"inside {k=}, {v=}")
                     maze["criteria"][k] = np.nan
 
         rig_extension = RigExtension(name='rig', **rig)
@@ -155,8 +124,9 @@ class VirmenDataInterface(BaseDataInterface):
                                             if k in MazeExtension.mazes_attr))
 
         num_trials = len(trials)
-        session_end_time = array_to_dt(matin['log']['session']['end']).isoformat()
+        session_end_time = array_to_dt(metadata['log']['session']['end']).isoformat()
         converted_metadata = convert_function_handle_to_str(mat_file_path=self.source_data['file_path'])
+
         lab_meta_data = dict(
             name='LabMetaData',
             experiment_name=converted_metadata[
@@ -174,8 +144,37 @@ class VirmenDataInterface(BaseDataInterface):
             mazes=maze_extension,
             # session_performance=0.,  # comment out to add (not in behavior file)
         )
+
         metadata['lab_meta_data'] = LabMetaDataExtension(**lab_meta_data)
-        nwbfile.add_lab_meta_data(metadata['lab_meta_data'])
+
+        metadata = dict_deep_update(metadata, metadata_from_mat_dict)
+
+
+        return metadata
+
+
+    def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict):
+        # Intervals
+        metadata_copy = deepcopy(self._mat_dict)
+        nwbfile.add_epoch_column('label', 'name of epoch')
+
+        if isinstance(metadata_copy['log']['block'], dict):
+            epochs = [metadata_copy['log']['block']]
+        else:
+            epochs = metadata_copy['log']['block']
+
+        trials = [trial for epoch in epochs for trial in epoch['trial'] if
+                    not np.isnan(trial['start'])]
+
+
+        converted_metadata = convert_function_handle_to_str(mat_file_path=self.source_data['file_path'])
+
+        nwbfile.add_lab_meta_data(metadata_copy['lab_meta_data'])
+
+
+        # ------------------------- Adding epochs information ------------------------- #
+
+        session_start_time = self._get_session_start_time()
 
         epoch_start_dts = [array_to_dt(epoch['start']) for epoch in epochs]
         epoch_durations_dts = [timedelta(seconds=epoch['duration']) for epoch in epochs]
@@ -228,6 +227,8 @@ class VirmenDataInterface(BaseDataInterface):
                                     description='stimulus configuration number',
                                     data=epoch_stimulus_config)
 
+        # ------------------------- Adding trial information ------------------------- #
+
         trial_starts = [trial['start'] + epoch_start_nwb[0] for trial in trials]
         trial_durations = [trial['duration'] for trial in trials]
         trial_ends = [start_time + duration for start_time, duration in
@@ -243,6 +244,7 @@ class VirmenDataInterface(BaseDataInterface):
         nwbfile.add_trial_column(name='trial_id',
                                     description='number of trial in block',
                                     data=trial_idx)
+
         trial_columns = [('iterations', 'number of iterations (frames) for entire trial'),
                             ('iCueEntry', 'iteration number when subject entered cue region'),
                             ('iMemEntry', 'iteration number when subject entered memory region'),
@@ -252,6 +254,7 @@ class VirmenDataInterface(BaseDataInterface):
                             ('excessTravel', 'total distance traveled during the trial '
                                             'normalized to the length of the maze'),
                             ('rewardScale', 'multiplier of reward for each correct trial')]
+
         for column_name, desc in trial_columns:
             data = [trial[column_name] for trial in trials if column_name in trial]
             if data:
@@ -268,7 +271,9 @@ class VirmenDataInterface(BaseDataInterface):
                                         description='type of trial (L=Left,R=Right)',
                                         data=converted_metadata['trial_type'])
 
-        # Processed cue timing and position
+
+        # --------------------- Processed cue timing and position -------------------- #
+
         left_cue_presence = [trial['cueCombo'][0] if len(trial['cueCombo'])
                                 else trial['cueCombo'] for trial in trials]
         left_cue_presence_data, left_cue_presence_indices = create_indexed_array(
@@ -283,13 +288,6 @@ class VirmenDataInterface(BaseDataInterface):
             trial['start'] + epoch_start_nwb[0] + trial['time'][trial['cueOnset'][0] - 1]
             if np.any(trial['cueOnset'][0]) else trial['cueOnset'][0] for trial in trials]
         left_cue_onset_data, left_cue_onset_indices = create_indexed_array(left_cue_onsets)
-
-        # print(f"{trial=}")
-        # print(f"{trial['time']=}")
-        # print(f"{trial['cueOnset']=}")
-        # print(f"{trial['time'][trial['cueOnset']]=}")
-        # print(f"{trial['time'][trial['cueOnset'][1]]=}")
-        # print(f"{trial['time'][trial['cueOnset'][1] - 1]=}")
 
         right_cue_onsets = [
             trial['start']
@@ -358,7 +356,9 @@ class VirmenDataInterface(BaseDataInterface):
                                     index=right_cue_position_indices,
                                     data=right_cue_position_data)
 
-        # Processed position, velocity, viewAngle
+
+        # ------------------ Processed position, velocity, viewAngle ----------------- #
+
         pos_obj = Position(name="Position")
         view_angle_obj = CompassDirection(name='ViewAngle')
 
@@ -367,6 +367,7 @@ class VirmenDataInterface(BaseDataInterface):
         velocity_data = np.empty_like(pos_data)
         view_angle_data = []
         collision = []
+
         for trial in trials:
             trial_total_time = trial['start'] + epoch_start_nwb[0] + trial['time']
             timestamps.extend(trial_total_time.astype(np.float64, casting='same_kind'))
@@ -415,8 +416,8 @@ class VirmenDataInterface(BaseDataInterface):
                                     unit='bool',
                                     resolution=np.nan,
                                     timestamps=H5DataIO(timestamps, compression="gzip"),
-                                    description='boolean to indicate for each frame'
-                                                ' whether collision was detected')
+                                    description='boolean to indicate for each frame' ' whether collision was detected')
+
         behavioral_processing_module = check_module(nwbfile, 'behavior',
                                                     'contains processed behavioral data')
         behavioral_processing_module.add_data_interface(pos_obj)
@@ -424,33 +425,6 @@ class VirmenDataInterface(BaseDataInterface):
         behavioral_processing_module.add_data_interface(view_angle_obj)
         behavioral_processing_module.add_data_interface(time)
         behavioral_processing_module.add_data_interface(collision_ts)
-
-    def add_trials(self, nwbfile: NWBFile):
-        pass
-
-    def add_position(self, nwbfile: NWBFile):
-        pass
-
-    def add_view_angle(self, nwbfile: NWBFile):
-        pass
-
-    def add_velocity(self, nwbfile: NWBFile):
-        pass
-
-    def add_sensor_dots(self, nwbfile: NWBFile):
-        pass
-
-    def add_add_events(self, nwbfile: NWBFile):
-        pass
-
-    def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict):
-        self.add_lab_meta_data(nwbfile=nwbfile)
-        self.add_trials(nwbfile=nwbfile)
-        self.add_position(nwbfile=nwbfile)
-        self.add_view_angle(nwbfile=nwbfile)
-        self.add_velocity(nwbfile=nwbfile)
-        self.add_sensor_dots(nwbfile=nwbfile)
-        self.add_events(nwbfile=nwbfile)
 
         return nwbfile
 
