@@ -317,42 +317,42 @@ class VirmenDataInterface(BaseDataInterface):
             right_cue_positions)
 
         nwbfile.add_trial_column(name='left_cue_presence',
-                                    description='indicates whether the nth cue appeared on the left',
+                                    description='Indicates whether the nth cue appeared on the left',
                                     index=left_cue_presence_indices,
                                     data=left_cue_presence_data)
 
         nwbfile.add_trial_column(name='right_cue_presence',
-                                    description='indicates whether the nth cue appeared on the right',
+                                    description='Indicates whether the nth cue appeared on the right',
                                     index=right_cue_presence_indices,
                                     data=right_cue_presence_data)
 
         nwbfile.add_trial_column(name='left_cue_onset',
-                                    description='onset times of left cues',
+                                    description='Onset times of left cues',
                                     index=left_cue_onset_indices,
                                     data=left_cue_onset_data)
 
         nwbfile.add_trial_column(name='right_cue_onset',
-                                    description='onset times of right cues',
+                                    description='Onset times of right cues',
                                     index=right_cue_onset_indices,
                                     data=right_cue_onset_data)
 
         nwbfile.add_trial_column(name='left_cue_offset',
-                                    description='offset times of left cues',
+                                    description='Offset times of left cues',
                                     index=left_cue_offset_indices,
                                     data=left_cue_offset_data)
 
         nwbfile.add_trial_column(name='right_cue_offset',
-                                    description='offset times of right cues',
+                                    description='Offset times of right cues',
                                     index=right_cue_offset_indices,
                                     data=right_cue_offset_data)
 
         nwbfile.add_trial_column(name='left_cue_position',
-                                    description='position of left cues',
+                                    description='Position of left cues',
                                     index=left_cue_position_indices,
                                     data=left_cue_position_data)
 
         nwbfile.add_trial_column(name='right_cue_position',
-                                    description='position of right cues',
+                                    description='Position of right cues',
                                     index=right_cue_position_indices,
                                     data=right_cue_position_data)
 
