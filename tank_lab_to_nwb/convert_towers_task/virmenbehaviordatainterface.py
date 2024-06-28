@@ -19,7 +19,7 @@ from neuroconv.datainterfaces import SpikeGLXRecordingInterface
 from neuroconv.utils import FilePathType, get_schema_from_method_signature, dict_deep_update
 
 from ..utils import check_module, convert_mat_file_to_dict, array_to_dt, create_indexed_array, \
-    flatten_nested_dict, convert_function_handle_to_str
+    flatten_nested_dict, convert_function_handle_to_str, create_and_store_indexed_array
 
 
 class VirmenDataInterface(BaseDataInterface):
@@ -328,25 +328,29 @@ class VirmenDataInterface(BaseDataInterface):
         stimulusTable_stimulus_post_prob = [trial['stimulusTable'][:,7] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
 
         trial_columns = [
-            ( left_cue_presence, 'left_cue_presence','Indicates whether the nth cue appeared on the left',),
-            ( right_cue_presence, 'right_cue_presence','Indicates whether the nth cue appeared on the right',),
-            ( left_cue_onset, 'left_cue_onset','Onset times of left cues'),
-            ( right_cue_onset, 'right_cue_onset', 'Onset times of right cues'),
-            ( left_cue_offset, 'left_cue_offset', 'Offset times of left cues'),
-            ( right_cue_offset, 'right_cue_offset', 'Offset times of right cues'),
-            ( left_cue_position, 'left_cue_position', 'Position of left cues'),
-            ( right_cue_position, 'right_cue_position', 'Position of right cues'),
-            (stimulusTable_prob, 'stimulusTable_prob', 'Prior probability of each pair'),
-            (stimulusTable_freq_stimulus_one,'stimulusTable_freq_stimulus_one','Frequency of first stimulus'),
-            (stimulusTable_freq_stimulus_two,'stimulusTable_freq_stimulus_two', 'Frequency of second stimulus'),
-            (stimulusTable_cumulative_stimulus_hitrate,'stimulusTable_cumulative_stimulus_hitrate', 'Cumulative hitrate for this stimulus pair'),
-            (stimulusTable_stimulus_ntimes_shown,'stimulusTable_stimulus_ntimes_shown', 'Number of times this pair has been shown'),
-            (stimulusTable_stimulus_post_prob,'stimulusTable_stimulus_post_prob', 'Posterior probability of showing this pair'),
-            (stimulusTable_side, 'stimulusTable_side','Correct side for each pair'),
+            ( 'left_cue_presence','Indicates whether the nth cue appeared on the left',),
+            ( 'right_cue_presence','Indicates whether the nth cue appeared on the right',),
+            ( 'left_cue_onset','Onset times of left cues'),
+            ( 'right_cue_onset', 'Onset times of right cues'),
+            ( 'left_cue_offset', 'Offset times of left cues'),
+            ( 'right_cue_offset', 'Offset times of right cues'),
+            ( 'left_cue_position', 'Position of left cues'),
+            ( 'right_cue_position', 'Position of right cues'),
+            ( 'stimulusTable_prob', 'Prior probability of each pair'),
+            ( 'stimulusTable_freq_stimulus_one', 'Frequency of first stimulus'),
+            ( 'stimulusTable_freq_stimulus_two', 'Frequency of second stimulus'),
+            ( 'stimulusTable_cumulative_stimulus_hitrate', 'Cumulative hitrate for this stimulus pair'),
+            ( 'stimulusTable_stimulus_ntimes_shown', 'Number of times this pair has been shown'),
+            ( 'stimulusTable_stimulus_post_prob', 'Posterior probability of showing this pair'),
+            ( 'stimulusTable_side', 'Correct side for each pair'),
         ]
 
 
-        for (variable, variable_name, description) in trial_columns:
+        for (variable_name, description) in trial_columns:
+            try:
+                variable = locals()[variable_name]
+            except:
+                raise ValueError(f"No such variable as {variable_name} is defined.")
             create_and_store_indexed_array(ndarray=variable, array_name=variable_name, description=description, nwbfile=nwbfile)
 
 
