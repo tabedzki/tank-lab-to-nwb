@@ -371,6 +371,8 @@ class VirmenDataInterface(BaseDataInterface):
             trial_total_time = trial['start'] + epoch_start_nwb[0] + trial['time']
             timestamps.extend(trial_total_time.astype(np.float64, casting='same_kind'))
 
+            # Padding exists since the time array is longer than all the other arrays.
+            # The other arrays are all the same length
             padding = np.full((trial['time'].shape[0] - trial['position'].shape[0], 2), np.nan)
             trial_position = trial['position'][:, :-1]
             trial_velocity = trial['velocity'][:, :-1]
@@ -386,6 +388,7 @@ class VirmenDataInterface(BaseDataInterface):
                             unit='s',
                             resolution=np.nan,
                             timestamps=H5DataIO(timestamps, compression="gzip"))
+
         pos_obj.add_spatial_series(
             SpatialSeries(
                 name="SpatialSeries",
