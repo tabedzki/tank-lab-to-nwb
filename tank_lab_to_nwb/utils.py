@@ -66,6 +66,8 @@ def mat_obj_to_dict(mat_struct):
         dict_from_struct[field_name] = mat_struct.__dict__[field_name]
         if isinstance(dict_from_struct[field_name], matlab.mio5_params.mat_struct):
             dict_from_struct[field_name] = mat_obj_to_dict(dict_from_struct[field_name])
+        elif isinstance(dict_from_struct[field_name], matlab.MatlabFunction):
+            dict_from_struct[field_name] = str(dict_from_struct[field_name])
         elif isinstance(dict_from_struct[field_name], np.ndarray):
             try:
                 dict_from_struct[field_name] = mat_obj_to_array(dict_from_struct[field_name])
