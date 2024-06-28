@@ -160,29 +160,29 @@ def convert_function_handle_to_str(mat_file_path):
      if matlab is installed on the system."""
     matlab_class = '''
     classdef Choice < uint32
-  
+
         enumeration
             L(1)
             R(2)
             nil(inf)
         end
-  
+
         methods (Static)
             function choices = all()
                 choices = enumeration('Choice')';
                 choices = choices(1:end-1);
             end
-    
+
             function num = count()
                 num = numel(enumeration('Choice'));
             end
         end
-  
+
         methods
             function opp = opposite(obj)
                 numValues   = numel(Choice.all());
                 assert(numValues == 2);     % the concept of "opposite" only works for sets of 2
-      
+
                 flipped     = double(obj);
                 flipped     = numValues+1 - flipped;
                 opp         = obj;
@@ -190,7 +190,7 @@ def convert_function_handle_to_str(mat_file_path):
                 opp(sel)    = flipped(sel);
             end
         end
-  
+
     end
     '''
     matlab_code = r'''
@@ -205,31 +205,31 @@ def convert_function_handle_to_str(mat_file_path):
     fid = fopen(protocol, 'wt');
     fprintf(fid, str_func);
     fclose(fid);
-    
+
     choice_data = [];
     for i = 1 : size(log.block, 2)
         for j = 1 : size(log.block(i).trial, 2)
             choice_data = [choice_data; string(log.block(i).trial(j).choice)];
         end
     end
-    
+
     choice = 'trial_choice.txt';
     fid = fopen(choice, 'wt');
     fprintf(fid,'%s\n', choice_data);
     fclose(fid);
-    
+
     trial_type_data = [];
     for i = 1 : size(log.block, 2)
         for j = 1 : size(log.block(i).trial, 2)
             trial_type_data = [trial_type_data; string(log.block(i).trial(j).trialType)];
         end
     end
-    
+
     trial_type = 'trial_type.txt';
     fid = fopen(trial_type, 'wt');
     fprintf(fid,'%s\n', trial_type_data);
     fclose(fid);
-    
+
     quit;
     '''
 
@@ -257,7 +257,7 @@ def convert_function_handle_to_str(mat_file_path):
     if which('matlab') is not None:
         try:
             os.system(matlab_cmd)
-        
+
             with open("code_version.txt", "r") as f:
                 version = f.readline()
             with open("protocol.txt", "r") as f:
