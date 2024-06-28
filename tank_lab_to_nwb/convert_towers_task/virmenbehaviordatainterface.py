@@ -390,22 +390,30 @@ class VirmenDataInterface(BaseDataInterface):
             SpatialSeries(
                 name="SpatialSeries",
                 data=H5DataIO(pos_data, compression="gzip"),
-                reference_frame="unknown",
-                conversion=0.01,
+                reference_frame="(0,-80) is the start of the 'sample' region (or 'cue' region) which varies by maze and task.",
+                description="The position of the animal by ViRMEN iteration.",
+                unit='cm/s',
+                # conversion=0.01,
                 resolution=np.nan,
                 timestamps=H5DataIO(timestamps, compression="gzip")
             )
         )
-        velocity_ts = TimeSeries(name='Velocity',
-                                    data=H5DataIO(velocity_data, compression="gzip"),
-                                    unit='cm/s',
-                                    resolution=np.nan,
-                                    timestamps=H5DataIO(timestamps, compression="gzip"))
+        velocity_ts = TimeSeries(
+            name='Velocity',
+            data=H5DataIO(velocity_data, compression="gzip"),
+            description="The velocity of the animal by ViRMEN iteration.",
+            unit='cm/s',
+            resolution=np.nan,
+            timestamps=H5DataIO(timestamps, compression="gzip")
+        )
+
         view_angle_obj.add_spatial_series(
             SpatialSeries(
                 name="SpatialSeries",
                 data=H5DataIO(view_angle_data, compression="gzip"),
                 reference_frame="unknown",
+                description="The velocity view angle of the animal by ViRMEN iteration in the unit of degrees.",
+                unit="degrees",
                 resolution=np.nan,
                 timestamps=H5DataIO(timestamps, compression="gzip")
             )
