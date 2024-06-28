@@ -7,7 +7,8 @@ from shutil import which
 import numpy as np
 from datetime import datetime
 from scipy.io import loadmat, matlab
-from collections import Iterable
+from collections.abc import Iterable
+from pynwb import NWBFile
 
 
 try:
@@ -127,6 +128,15 @@ def create_indexed_array(ndarray):
     array_indices = np.cumsum(array_indices, dtype=np.uint64)
 
     return flat_array, array_indices
+
+def create_and_store_indexed_array(ndarray, array_name, description, nwbfile):
+
+    array_data, array_indices = create_indexed_array(ndarray)
+
+    nwbfile.add_trial_column(name=array_name,
+                            description=description,
+                            index=array_indices,
+                            data=array_data)
 
 
 def flatten_nested_dict(nested_dict):

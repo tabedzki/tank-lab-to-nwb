@@ -273,6 +273,7 @@ class VirmenDataInterface(BaseDataInterface):
 
 
         # --------------------- Processed cue timing and position -------------------- #
+        # -------- This information stays the same throughout the specific trial ------ #
 
         left_cue_presence = [trial['cueCombo'][0] if len(trial['cueCombo'])
                                 else trial['cueCombo'] for trial in trials]
@@ -284,80 +285,74 @@ class VirmenDataInterface(BaseDataInterface):
         right_cue_presence_data, right_cue_presence_indices = create_indexed_array(
             right_cue_presence)
 
-        left_cue_onsets = [
+        left_cue_onset = [
             trial['start'] + epoch_start_nwb[0] + trial['time'][trial['cueOnset'][0] - 1]
             if np.any(trial['cueOnset'][0]) else trial['cueOnset'][0] for trial in trials]
-        left_cue_onset_data, left_cue_onset_indices = create_indexed_array(left_cue_onsets)
 
-        right_cue_onsets = [
+        right_cue_onset = [
             trial['start']
             + epoch_start_nwb[0]
             + trial['time'][trial['cueOnset'][1] - 1]
             if np.any(trial['cueOnset'][1]) else trial['cueOnset'][1] for trial in trials]
-        right_cue_onset_data, right_cue_onset_indices = create_indexed_array(right_cue_onsets)
 
-        left_cue_offsets = [
+        left_cue_offset = [
             trial['start'] + epoch_start_nwb[0] + trial['time'][trial['cueOffset'][0] - 1]
             if np.any(trial['cueOffset'][0]) else trial['cueOffset'][0] for trial in trials]
-        left_cue_offset_data, left_cue_offset_indices = create_indexed_array(left_cue_offsets)
 
-        right_cue_offsets = [
+        right_cue_offset = [
             trial['start'] + epoch_start_nwb[0] + trial['time'][trial['cueOffset'][1] - 1]
             if np.any(trial['cueOffset'][1]) else trial['cueOffset'][1] for trial in trials]
-        right_cue_offset_data, right_cue_offset_indices = create_indexed_array(right_cue_offsets)
 
-        left_cue_positions = [trial['cuePos'][0] if len(trial['cuePos'])
+        left_cue_position = [trial['cuePos'][0] if len(trial['cuePos'])
                                 else trial['cuePos'] for trial in trials]
-        left_cue_position_data, left_cue_position_indices = create_indexed_array(
-            left_cue_positions)
 
-        right_cue_positions = [trial['cuePos'][1] if len(trial['cuePos'])
+        right_cue_position = [trial['cuePos'][1] if len(trial['cuePos'])
                                 else trial['cuePos'] for trial in trials]
-        right_cue_position_data, right_cue_position_indices = create_indexed_array(
-            right_cue_positions)
 
-        nwbfile.add_trial_column(name='left_cue_presence',
-                                    description='Indicates whether the nth cue appeared on the left',
-                                    index=left_cue_presence_indices,
-                                    data=left_cue_presence_data)
 
-        nwbfile.add_trial_column(name='right_cue_presence',
-                                    description='Indicates whether the nth cue appeared on the right',
-                                    index=right_cue_presence_indices,
-                                    data=right_cue_presence_data)
+        stimulusTable_pairNum = [trial['stimulusTable'][:,0] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
+        create_and_store_indexed_array(stimulusTable_pairNum, 'stimulusTable_pairNum', 'Indicates whether the nth cue appeared on the left', nwbfile=nwbfile)
 
-        nwbfile.add_trial_column(name='left_cue_onset',
-                                    description='Onset times of left cues',
-                                    index=left_cue_onset_indices,
-                                    data=left_cue_onset_data)
+        stimulusTable_prob = [trial['stimulusTable'][:,1] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
 
-        nwbfile.add_trial_column(name='right_cue_onset',
-                                    description='Onset times of right cues',
-                                    index=right_cue_onset_indices,
-                                    data=right_cue_onset_data)
+        stimulusTable_side = [trial['stimulusTable'][:,2] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
 
-        nwbfile.add_trial_column(name='left_cue_offset',
-                                    description='Offset times of left cues',
-                                    index=left_cue_offset_indices,
-                                    data=left_cue_offset_data)
+        stimulusTable_freq_stimulus_one = [trial['stimulusTable'][:,3] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
 
-        nwbfile.add_trial_column(name='right_cue_offset',
-                                    description='Offset times of right cues',
-                                    index=right_cue_offset_indices,
-                                    data=right_cue_offset_data)
+        stimulusTable_freq_stimulus_two = [trial['stimulusTable'][:,4] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
 
-        nwbfile.add_trial_column(name='left_cue_position',
-                                    description='Position of left cues',
-                                    index=left_cue_position_indices,
-                                    data=left_cue_position_data)
+        stimulusTable_cumulative_stimulus_hitrate = [trial['stimulusTable'][:,5] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
 
-        nwbfile.add_trial_column(name='right_cue_position',
-                                    description='Position of right cues',
-                                    index=right_cue_position_indices,
-                                    data=right_cue_position_data)
+        stimulusTable_stimulus_ntimes_shown = [trial['stimulusTable'][:,6] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
+
+        stimulusTable_stimulus_post_prob = [trial['stimulusTable'][:,7] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
+
+        trial_columns = [
+            ( left_cue_presence, 'left_cue_presence','Indicates whether the nth cue appeared on the left',),
+            ( right_cue_presence, 'right_cue_presence','Indicates whether the nth cue appeared on the right',),
+            ( left_cue_onset, 'left_cue_onset','Onset times of left cues'),
+            ( right_cue_onset, 'right_cue_onset', 'Onset times of right cues'),
+            ( left_cue_offset, 'left_cue_offset', 'Offset times of left cues'),
+            ( right_cue_offset, 'right_cue_offset', 'Offset times of right cues'),
+            ( left_cue_position, 'left_cue_position', 'Position of left cues'),
+            ( right_cue_position, 'right_cue_position', 'Position of right cues'),
+            (stimulusTable_prob, 'stimulusTable_prob', 'Prior probability of each pair'),
+            (stimulusTable_freq_stimulus_one,'stimulusTable_freq_stimulus_one','Frequency of first stimulus'),
+            (stimulusTable_freq_stimulus_two,'stimulusTable_freq_stimulus_two', 'Frequency of second stimulus'),
+            (stimulusTable_cumulative_stimulus_hitrate,'stimulusTable_cumulative_stimulus_hitrate', 'Cumulative hitrate for this stimulus pair'),
+            (stimulusTable_stimulus_ntimes_shown,'stimulusTable_stimulus_ntimes_shown', 'Number of times this pair has been shown'),
+            (stimulusTable_stimulus_post_prob,'stimulusTable_stimulus_post_prob', 'Posterior probability of showing this pair'),
+            (stimulusTable_side, 'stimulusTable_side','Correct side for each pair'),
+        ]
+
+
+        for (variable, variable_name, description) in trial_columns:
+            create_and_store_indexed_array(ndarray=variable, array_name=variable_name, description=description, nwbfile=nwbfile)
+
 
 
         # ------------------ Processed position, velocity, viewAngle ----------------- #
+        # ---------- This information changes throughout the specific trial ----------- #
 
         pos_obj = Position(name="Position")
         view_angle_obj = CompassDirection(name='ViewAngle')
