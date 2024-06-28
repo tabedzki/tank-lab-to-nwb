@@ -280,7 +280,7 @@ def convert_function_handle_to_str(mat_file_path):
         except Exception as e:
             print(f"There was an error while trying to execute {convert_script_path}:\n{e}")
     else:
-        print("A working matlab version was not found. "
+        raise Exception("A working matlab version was not found. "
               "Code version, animal protocol, type of trial, and choice could not be saved to NWB.")
 
     os.remove("Choice.m")
