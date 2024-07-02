@@ -256,15 +256,37 @@ class VirmenDataInterface(BaseDataInterface):
                                     description='number of trial in block',
                                     data=trial_idx)
 
-        trial_columns = [('iterations', 'number of iterations (frames) for entire trial'),
-                            ('iCueEntry', 'iteration number when subject entered cue region'),
-                            ('iMemEntry', 'iteration number when subject entered memory region'),
-                            ('iTurnEntry', 'iteration number when subject entered turn region'),
-                            ('iArmEntry', 'iteration number when subject entered arm region'),
-                            ('iBlank', 'iteration number when screen is turned off'),
-                            ('excessTravel', 'total distance traveled during the trial '
-                                            'normalized to the length of the maze'),
-                            ('rewardScale', 'multiplier of reward for each correct trial')]
+        trial_columns = [
+            ( 'iterations', 'number of iterations (frames) for entire trial'),
+            ( 'iCueEntry', 'iteration number when subject entered cue region'),
+            ( 'iMemEntry', 'iteration number when subject entered memory region'),
+            ( 'iTurnEntry', 'iteration number when subject entered turn region'),
+            ( 'iArmEntry', 'iteration number when subject entered arm region'),
+            ( 'iBlank', 'iteration number when screen is turned off'),
+            ( 'excessTravel', 'total distance traveled during the trial '
+                             'normalized to the length of the maze'),
+            ( 'rewardScale', 'multiplier of reward for each correct trial'),
+
+            ( 'StartCycle',	'The spatial frequency of the first stimulus shown to the mouse.'),
+            ( 'EndCycle',	'The spatial frequency of the second stimulus shown to the mouse.'),
+            ( 'rule',	'Specifies what the mouse should do to receive reward. Can be "StartCycle < EndCycle Left" or "StartCycle < EndCycle Right"'),
+            ( 'trialNum',	'The trial number (not reliable, bugged).'),
+            ( 'multibiasBeta',	'Scalar value indicating the strength of the multibias.'),
+            ( 'multibiasTau',	'Scalar value indicating the history dependence of the multibias.'),
+            ( 'pairNum',	'Integer value indicating which stimulus pair was shown, is a row index into stimulusTable.'),
+            ( 'wallGuide',	'Boolean, whether wallGuides were active or not on this trial.'),
+            ( 'alpha_plus',	'Scalar, how much to multiply step_size by when moving the moon beacon trigger forward.'),
+            ( 'alpha_minus',	'Scalar, how much to multiply step_size by when moving the moon beacon trigger back.'),
+            ( 'moonBeaconEnabled',	'Boolean, whether the moon beacon is enabled or not.'),
+            ( 'moonBeaconPos',	'Scalar [cm], current position of the moon beacon trigger relative to the moonBeaconTrigger.'),
+            ( 'moonBeaconTrigger',	'String indicating the trigger point for the moon. Can be "Sa" or "Sb".'),
+            ( 'step_size',	'Scalar [cm], how much to move the moon beacon triggerpoint on each trial.'),
+            ( 'lsrON',	'Whether the laser is on for a given trial, 0=laser off, 1=laser on'),
+            ( 'iLaserOn',	'Virmen iteration when laser is turn on (if it is, otherwise 0)'),
+            ( 'iLaserOff',	'Virmen iteration when laser is turn off (if it is, otherwise 0)'),
+            ( 'moonDistHint',	'Distance from start at which moon beacon appears'),
+            ( 'forcedChoice',	'Whether a trial is a forced choice L-maze environment, 0=T-maze, 1=L-maze'),
+                            ]
 
         for column_name, desc in trial_columns:
             data = [trial[column_name] for trial in trials if column_name in trial]
@@ -320,24 +342,6 @@ class VirmenDataInterface(BaseDataInterface):
         right_cue_position = [trial['cuePos'][1] if len(trial['cuePos'])
                                 else trial['cuePos'] for trial in trials]
 
-
-        stimulusTable_pairNum = [trial['stimulusTable'][:,0] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
-        create_and_store_indexed_array(stimulusTable_pairNum, 'stimulusTable_pairNum', 'Indicates whether the nth cue appeared on the left', nwbfile=nwbfile)
-
-        stimulusTable_prob = [trial['stimulusTable'][:,1] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
-
-        stimulusTable_side = [trial['stimulusTable'][:,2] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
-
-        stimulusTable_freq_stimulus_one = [trial['stimulusTable'][:,3] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
-
-        stimulusTable_freq_stimulus_two = [trial['stimulusTable'][:,4] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
-
-        stimulusTable_cumulative_stimulus_hitrate = [trial['stimulusTable'][:,5] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
-
-        stimulusTable_stimulus_ntimes_shown = [trial['stimulusTable'][:,6] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
-
-        stimulusTable_stimulus_post_prob = [trial['stimulusTable'][:,7] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
-
         baseCycles = [trial['baseCycles'] if len(trial['baseCycles']) else trial['baseCycles'] for trial in trials]
 
         trial_columns = [
@@ -349,6 +353,23 @@ class VirmenDataInterface(BaseDataInterface):
             ( 'right_cue_offset', 'Offset times of right cues'),
             ( 'left_cue_position', 'Position of left cues'),
             ( 'right_cue_position', 'Position of right cues'),
+            # ( 'hitHistory',	'Boolean vector tracking whether the mouse got the trial correct or not.'),
+            # ( 'classHistory',	'Vector tracking which (StartCycle,EndCycle) stimulus pair was shown to the mouse, with each value being a row index into stimulusTable.'),
+            ( 'baseCycles',	'The base set of spatial frequencies from which StartCycle and EndCycle can be drawn.'),
+        ]
+
+        if trial.get('stimulusTable'):
+
+            stimulusTable_columns = zip(*[(trial['stimulusTable'][:, i] if len(trial['stimulusTable']) else trial['stimulusTable']
+                                        for i in range(8)) for trial in trials])
+
+            # Unpack the transposed columns into separate variables
+            (stimulusTable_pairNum, stimulusTable_prob, stimulusTable_side,
+            stimulusTable_freq_stimulus_one, stimulusTable_freq_stimulus_two,
+            stimulusTable_cumulative_stimulus_hitrate, stimulusTable_stimulus_ntimes_shown,
+            stimulusTable_stimulus_post_prob) = stimulusTable_columns
+
+            trial_columns.append( [
             ( 'stimulusTable_prob', 'Prior probability of each pair'),
             ( 'stimulusTable_freq_stimulus_one', 'Frequency of first stimulus'),
             ( 'stimulusTable_freq_stimulus_two', 'Frequency of second stimulus'),
@@ -356,6 +377,7 @@ class VirmenDataInterface(BaseDataInterface):
             ( 'stimulusTable_stimulus_ntimes_shown', 'Number of times this pair has been shown'),
             ( 'stimulusTable_stimulus_post_prob', 'Posterior probability of showing this pair'),
             ( 'stimulusTable_side', 'Correct side for each pair'),
+            ])
 
             stimulusTable_pairNum = [trial['stimulusTable'][:,0] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
             stimulusTable_prob = [trial['stimulusTable'][:,1] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
