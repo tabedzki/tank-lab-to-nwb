@@ -70,30 +70,52 @@ class VirmenDataInterface(BaseDataInterface):
         Get metadata from the mat file and add it to the metadata dictionary.
         """
 
-        metadata = super().get_metadata()
+        super_metadata = super().get_metadata()
 
-        session = self._mat_dict["session"]
-        experimenter = [", ".join(session["experimenter"].split(" ")[::-1])]
+        local_log_copy = deepcopy(self._mat_dict["log"])
+        metadata = deepcopy(self._mat_dict)
+        session = local_log_copy["session"]
+        # experimenter = [", ".join(session["experimenter"].split(" ")[::-1])]
+        #! !TODO: Fetch the experimenter from the database
+        experimenter = ["FAKE PERSON"]
         session_start_time = self._get_session_start_time()
 
         metadata_from_mat_dict = dict(
-            Subject=dict(subject_id=session["animal"]),
+            Subject=dict(subject_id=local_log_copy["animal"]),
             NWBFile=dict(experimenter=experimenter, session_start_time=session_start_time),
         )
 
-        experiment_metadata = metadata['log']['version']
 
-        if isinstance(metadata['log']['block'], dict):
-            epochs = [metadata['log']['block']]
+        metadata = dict_deep_update(super_metadata, metadata_from_mat_dict, copy=True)
+        # super_metadata.add(metadata)
+
+        # metadata = dict_deep_update(super_metadata, metadata, copy=True)
+        # metadata = dict_deep_update(super_metadata, metadata_from_mat_dict, copy=True)
+
+
+        return metadata
+
+
+    def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict):
+
+        metadata_copy = deepcopy(self._mat_dict)
+        nwbfile.add_epoch_column('label', 'name of epoch')
+
+        # ------------------------ Adding LabMetaDataExtension ----------------------- #
+
+        experiment_metadata = metadata_copy['log']['version']
+
+        if isinstance(metadata_copy['log']['block'], dict):
+            epochs = [metadata_copy['log']['block']]
         else:
-            epochs = metadata['log']['block']
+            epochs = metadata_copy['log']['block']
 
         trials = [trial for epoch in epochs for trial in epoch['trial'] if
                     not np.isnan(trial['start'])]
 
         # Extension of lab metadata
-        experiment_metadata = metadata['log']['version']
-        subject_metadata = metadata['log']['animal']
+        experiment_metadata = metadata_copy['log']['version']
+        subject_metadata = metadata_copy['log']['animal']
         rig_atrr = ['rig', 'simulationMode', 'hasDAQ', 'hasSyncComm', 'minIterationDT',
                     'arduinoPort', 'sensorDotsPerRev', 'ballCircumference', 'toroidXFormP1',
                     'toroidXFormP2', 'colorAdjustment', 'soundAdjustment', 'nidaqDevice',
@@ -124,7 +146,7 @@ class VirmenDataInterface(BaseDataInterface):
                                             if k in MazeExtension.mazes_attr))
 
         num_trials = len(trials)
-        session_end_time = array_to_dt(metadata['log']['session']['end']).isoformat()
+        session_end_time = array_to_dt(metadata_copy['log']['session']['end']).isoformat()
         converted_metadata = convert_function_handle_to_str(mat_file_path=self.source_data['file_path'])
 
         lab_meta_data = dict(
@@ -145,18 +167,10 @@ class VirmenDataInterface(BaseDataInterface):
             # session_performance=0.,  # comment out to add (not in behavior file)
         )
 
-        metadata['lab_meta_data'] = LabMetaDataExtension(**lab_meta_data)
-
-        metadata = dict_deep_update(metadata, metadata_from_mat_dict)
+        nwbfile.add_lab_meta_data(LabMetaDataExtension(**lab_meta_data))
 
 
-        return metadata
-
-
-    def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict):
-        # Intervals
-        metadata_copy = deepcopy(self._mat_dict)
-        nwbfile.add_epoch_column('label', 'name of epoch')
+        # --------------------------- Calculating Intervals -------------------------- #
 
         if isinstance(metadata_copy['log']['block'], dict):
             epochs = [metadata_copy['log']['block']]
@@ -166,10 +180,6 @@ class VirmenDataInterface(BaseDataInterface):
         trials = [trial for epoch in epochs for trial in epoch['trial'] if
                     not np.isnan(trial['start'])]
 
-
-        converted_metadata = convert_function_handle_to_str(mat_file_path=self.source_data['file_path'])
-
-        nwbfile.add_lab_meta_data(metadata_copy['lab_meta_data'])
 
 
         # ------------------------- Adding epochs information ------------------------- #
@@ -228,6 +238,7 @@ class VirmenDataInterface(BaseDataInterface):
                                     data=epoch_stimulus_config)
 
         # ------------------------- Adding trial information ------------------------- #
+        # -------- This information stays the same throughout the specific trial ------ #
 
         trial_starts = [trial['start'] + epoch_start_nwb[0] for trial in trials]
         trial_durations = [trial['duration'] for trial in trials]
