@@ -358,7 +358,7 @@ class VirmenDataInterface(BaseDataInterface):
             ( 'baseCycles',	'The base set of spatial frequencies from which StartCycle and EndCycle can be drawn.'),
         ]
 
-        if trial.get('stimulusTable'):
+        if 'stimulusTable' in trial:
 
             stimulusTable_columns = zip(*[(trial['stimulusTable'][:, i] if len(trial['stimulusTable']) else trial['stimulusTable']
                                         for i in range(8)) for trial in trials])
