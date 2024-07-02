@@ -369,7 +369,7 @@ class VirmenDataInterface(BaseDataInterface):
             stimulusTable_cumulative_stimulus_hitrate, stimulusTable_stimulus_ntimes_shown,
             stimulusTable_stimulus_post_prob) = stimulusTable_columns
 
-            trial_columns.append( [
+            trial_columns.extend( [
             ( 'stimulusTable_prob', 'Prior probability of each pair'),
             ( 'stimulusTable_freq_stimulus_one', 'Frequency of first stimulus'),
             ( 'stimulusTable_freq_stimulus_two', 'Frequency of second stimulus'),
