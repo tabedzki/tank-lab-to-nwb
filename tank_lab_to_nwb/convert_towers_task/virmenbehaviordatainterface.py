@@ -338,6 +338,8 @@ class VirmenDataInterface(BaseDataInterface):
 
         stimulusTable_stimulus_post_prob = [trial['stimulusTable'][:,7] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
 
+        baseCycles = [trial['baseCycles'] if len(trial['baseCycles']) else trial['baseCycles'] for trial in trials]
+
         trial_columns = [
             ( 'left_cue_presence','Indicates whether the nth cue appeared on the left',),
             ( 'right_cue_presence','Indicates whether the nth cue appeared on the right',),
@@ -354,7 +356,16 @@ class VirmenDataInterface(BaseDataInterface):
             ( 'stimulusTable_stimulus_ntimes_shown', 'Number of times this pair has been shown'),
             ( 'stimulusTable_stimulus_post_prob', 'Posterior probability of showing this pair'),
             ( 'stimulusTable_side', 'Correct side for each pair'),
-        ]
+
+            stimulusTable_pairNum = [trial['stimulusTable'][:,0] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
+            stimulusTable_prob = [trial['stimulusTable'][:,1] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
+            stimulusTable_side = [trial['stimulusTable'][:,2] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
+            stimulusTable_freq_stimulus_one = [trial['stimulusTable'][:,3] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
+            stimulusTable_freq_stimulus_two = [trial['stimulusTable'][:,4] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
+            stimulusTable_cumulative_stimulus_hitrate = [trial['stimulusTable'][:,5] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
+            stimulusTable_stimulus_ntimes_shown = [trial['stimulusTable'][:,6] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
+            stimulusTable_stimulus_post_prob = [trial['stimulusTable'][:,7] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
+
 
 
         for (variable_name, description) in trial_columns:
