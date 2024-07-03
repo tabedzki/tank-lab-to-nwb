@@ -311,13 +311,9 @@ class VirmenDataInterface(BaseDataInterface):
 
         left_cue_presence = [trial['cueCombo'][0] if len(trial['cueCombo'])
                                 else trial['cueCombo'] for trial in trials]
-        left_cue_presence_data, left_cue_presence_indices = create_indexed_array(
-            left_cue_presence)
 
         right_cue_presence = [trial['cueCombo'][1] if len(trial['cueCombo'])
                                 else trial['cueCombo'] for trial in trials]
-        right_cue_presence_data, right_cue_presence_indices = create_indexed_array(
-            right_cue_presence)
 
         left_cue_onset = [
             trial['start'] + epoch_start_nwb[0] + trial['time'][trial['cueOnset'][0] - 1]
@@ -343,7 +339,6 @@ class VirmenDataInterface(BaseDataInterface):
         right_cue_position = [trial['cuePos'][1] if len(trial['cuePos'])
                                 else trial['cuePos'] for trial in trials]
 
-        baseCycles = [trial['baseCycles'] if len(trial['baseCycles']) else trial['baseCycles'] for trial in trials]
 
         trial_columns = [
             ( 'left_cue_presence','Indicates whether the nth cue appeared on the left',),
@@ -354,10 +349,28 @@ class VirmenDataInterface(BaseDataInterface):
             ( 'right_cue_offset', 'Offset times of right cues'),
             ( 'left_cue_position', 'Position of left cues'),
             ( 'right_cue_position', 'Position of right cues'),
-            # ( 'hitHistory',	'Boolean vector tracking whether the mouse got the trial correct or not.'),
-            # ( 'classHistory',	'Vector tracking which (StartCycle,EndCycle) stimulus pair was shown to the mouse, with each value being a row index into stimulusTable.'),
-            ( 'baseCycles',	'The base set of spatial frequencies from which StartCycle and EndCycle can be drawn.'),
         ]
+
+        if 'baseCycles' in trials[0]:
+            baseCycles = [trial['baseCycles'] if len(trial['baseCycles']) else trial['baseCycles'] for trial in trials]
+
+            trial_columns.append(( 'baseCycles',	'The base set of spatial frequencies from which StartCycle and EndCycle can be drawn.'))
+
+
+        left_licks = []
+        right_licks = []
+
+        if 'licks' in trials[0]:
+            for trial in trials:
+                left_stuff = trial['start'] + epoch_start_nwb[0] + trial['time'][(trial['licks'][0][(trial['licks'][1] == 1)] -1).astype(int).tolist()]
+                left_licks.append(left_stuff)
+                right_stuff = trial['start'] + epoch_start_nwb[0] + trial['time'][(trial['licks'][0][(trial['licks'][1] == 2)] -1).astype(int).tolist()]
+                right_licks.append(right_stuff)
+
+            trial_columns.extend([
+                ( 'left_licks', 'Offset times of left cues'),
+                ( 'right_licks', 'Offset times of right cues'),
+                ])
 
         if 'stimulusTable' in trial:
 
@@ -371,6 +384,7 @@ class VirmenDataInterface(BaseDataInterface):
             stimulusTable_stimulus_post_prob) = stimulusTable_columns
 
             trial_columns.extend( [
+            ( 'stimulusTable_pairNum', 'row index'),
             ( 'stimulusTable_prob', 'Prior probability of each pair'),
             ( 'stimulusTable_freq_stimulus_one', 'Frequency of first stimulus'),
             ( 'stimulusTable_freq_stimulus_two', 'Frequency of second stimulus'),
@@ -380,14 +394,6 @@ class VirmenDataInterface(BaseDataInterface):
             ( 'stimulusTable_side', 'Correct side for each pair'),
             ])
 
-            stimulusTable_pairNum = [trial['stimulusTable'][:,0] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
-            stimulusTable_prob = [trial['stimulusTable'][:,1] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
-            stimulusTable_side = [trial['stimulusTable'][:,2] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
-            stimulusTable_freq_stimulus_one = [trial['stimulusTable'][:,3] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
-            stimulusTable_freq_stimulus_two = [trial['stimulusTable'][:,4] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
-            stimulusTable_cumulative_stimulus_hitrate = [trial['stimulusTable'][:,5] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
-            stimulusTable_stimulus_ntimes_shown = [trial['stimulusTable'][:,6] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
-            stimulusTable_stimulus_post_prob = [trial['stimulusTable'][:,7] if len(trial['stimulusTable']) else trial['stimulusTable'] for trial in trials ]
 
 
 
