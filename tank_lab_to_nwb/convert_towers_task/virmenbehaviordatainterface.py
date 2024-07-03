@@ -238,6 +238,23 @@ class VirmenDataInterface(BaseDataInterface):
                                     description='stimulus configuration number',
                                     data=epoch_stimulus_config)
 
+
+        # Optional Block/Epoch level information
+
+        epoch_columns = [
+            ('lsrepoch',	'Which task epochs the laser can be on in',),
+            ('P_on',	'probability of a trial being a laser on trial',),
+            ('context',	'Determines if pro or anti, 1=Pro, 2=Anti',),
+            ('stage',	'Variable tracking pro/anti training stage, since mazeID is used to handle context switching',),
+            ]
+
+        for column_name, desc in epoch_columns:
+            data = [epoch[column_name] for epoch in epochs if column_name in epoch]
+            if data:
+                nwbfile.add_epoch_column(name=column_name,
+                                            description=desc,
+                                            data=data)
+
         # ------------------------- Adding trial information ------------------------- #
         # -------- This information stays the same throughout the specific trial ------ #
 
