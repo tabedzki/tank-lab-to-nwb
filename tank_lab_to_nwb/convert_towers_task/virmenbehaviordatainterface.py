@@ -211,6 +211,7 @@ class VirmenDataInterface(BaseDataInterface):
         epoch_durations = [epoch['duration'] for epoch in epochs]
         epoch_reward_mil = [epoch['rewardMiL'] for epoch in epochs]
         epoch_stimulus_config = [epoch['stimulusConfig'] for epoch in epochs]
+
         nwbfile.add_epoch_column(name='maze_id',
                                     description='number of maze run in an epoch',
                                     data=epoch_maze_ids)
@@ -427,11 +428,13 @@ class VirmenDataInterface(BaseDataInterface):
             view_angle_data = np.concatenate([view_angle_data, trial_view_angle,
                                                 padding[:, 0]], axis=0)
             collision = np.concatenate([collision, trial_collision, padding[:, 0]], axis=0)
+
         time = TimeSeries(name='Time',
                             data=H5DataIO(timestamps, compression="gzip"),
                             unit='s',
                             resolution=np.nan,
                             timestamps=H5DataIO(timestamps, compression="gzip"))
+
 
         pos_obj.add_spatial_series(
             SpatialSeries(
