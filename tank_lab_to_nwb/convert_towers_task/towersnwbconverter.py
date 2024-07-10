@@ -3,8 +3,11 @@ from pathlib import Path
 from typing import Optional, Union
 import numpy as np
 
-from nwb_conversion_tools import NWBConverter, SpikeGLXRecordingInterface, SpikeGLXLFPInterface
-import spikeextractors as se
+#from neuroconv import NWBConverter, SpikeGLXRecordingInterface, SpikeGLXLFPInterface
+from neuroconv import NWBConverter
+from neuroconv.datainterfaces import SpikeGLXRecordingInterface
+from neuroconv.datainterfaces import *
+# import spikeextractors as se
 
 from .virmenbehaviordatainterface import VirmenDataInterface
 from ..utils import convert_mat_file_to_dict
@@ -17,9 +20,11 @@ class TowersNWBConverter(NWBConverter):
     """Primary conversion class for the Tank lab Towers task processing pipeline."""
 
     data_interface_classes = dict(
-        SpikeGLXRecording=SpikeGLXRecordingInterface,
-        SpikeGLXLFP=SpikeGLXLFPInterface,
+        SpikeGLXAP=SpikeGLXRecordingInterface,
+        SpikeGLXLFP=SpikeGLXRecordingInterface,
         VirmenData=VirmenDataInterface,
+        Suite2pSegmentation=Suite2pSegmentationInterface,
+        TiffImagaging=TiffImagingInterface
     )
 
     def __init__(self, source_data, ttl_source: PathType):
