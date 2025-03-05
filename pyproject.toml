@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tank-lab-to-nwb"
+# dynamic = ["version"]
+"version" = "0.4.0"
+description = "NWB conversion scripts and tutorials."
+readme = "README.md"
+license = ""
+authors = [
+    { name = "Luiz Tauffer", email = "ben.dichter@gmail.com" },
+    { name = "Cody Baker Szonja Weigl" },
+    { name = "and Ben Dichter" },
+]
+dependencies = [
+    "h5py",
+    "ipywidgets",
+    "isodate",
+    "ndx-tank-metadata",
+    "neuroconv",
+    "notebook",
+    "numpy",
+    "nwbwidgets",
+    "pynwb",
+]
+
+requires-python = ">=3.10"
+
+[project.urls]
+Homepage = "https://github.com/catalystneuro/tank-lab-to-nwb"
+
+# [tool.hatch.version]
+# path = "tank_lab_to_nwb/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/tank_lab_to_nwb",
+]
