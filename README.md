@@ -122,7 +122,7 @@ Location in Virmen (.mat) file  | Location in NWB file | Description
 
 Rig information is converted from a `log.version.rig` struct object to a dictionary like as in this example:
 
-```
+```python
 {'rig': 'NPX',
  'simulationMode': 1,
  'hasDAQ': 1,
