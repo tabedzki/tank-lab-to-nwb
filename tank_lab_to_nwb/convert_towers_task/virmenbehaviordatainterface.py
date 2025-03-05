@@ -1,28 +1,31 @@
 """Authors: Cody Baker Szonja Weigl and Ben Dichter."""
-from datetime import timedelta, datetime
-from pathlib import Path
 from copy import deepcopy
+from datetime import timedelta
+from pathlib import Path
+from typing import override
 
-import warnings
-from typing import Optional
-
-from neuroconv.utils.dict import DeepDict
 import numpy as np
 from hdmf.backends.hdf5.h5_utils import H5DataIO
-from neuroconv.basedatainterface import BaseDataInterface
-from neuroconv.utils import get_base_schema, get_schema_from_hdmf_class
+from ndx_tank_metadata import LabMetaDataExtension, MazeExtension, RigExtension
+
+# from neuroconv.basedatainterface import BaseData
+from neuroconv.basetemporalalignmentinterface import BaseTemporalAlignmentInterface
+from neuroconv.utils import FilePathType, dict_deep_update
+from neuroconv.utils.dict import DeepDict
 from pynwb import NWBFile, TimeSeries
-from pynwb.behavior import SpatialSeries, Position, CompassDirection
-from ndx_tank_metadata import LabMetaDataExtension, RigExtension, MazeExtension
-from neuroconv.datainterfaces import SpikeGLXRecordingInterface
+from pynwb.behavior import CompassDirection, Position, SpatialSeries
 
-from neuroconv.utils import FilePathType, get_schema_from_method_signature, dict_deep_update
+from ..utils import (
+    array_to_dt,
+    check_module,
+    convert_function_handle_to_str,
+    convert_mat_file_to_dict,
+    create_and_store_indexed_array,
+    flatten_nested_dict,
+)
 
-from ..utils import check_module, convert_mat_file_to_dict, array_to_dt, create_indexed_array, \
-    flatten_nested_dict, convert_function_handle_to_str, create_and_store_indexed_array
 
-
-class VirmenDataInterface(BaseDataInterface):
+class VirmenDataInterface(BaseTemporalAlignmentInterface):
     """Conversion class for Virmen behavioral data."""
 
     def __init__(
@@ -51,6 +54,41 @@ class VirmenDataInterface(BaseDataInterface):
         self._mat_dict = convert_mat_file_to_dict(mat_file)
         self._times = None
 
+
+    @override
+    def get_timestamps(self) -> np.ndarray:
+        return self._times if self._times is not None else self.get_original_timestamps()
+
+    @override
+    def get_original_timestamps(self) -> np.ndarray:
+
+        metadata_copy = deepcopy(self._mat_dict)
+
+        session_start_time = self._get_session_start_time()
+
+        if isinstance(metadata_copy['log']['block'], dict):
+            epochs: list[dict] = [metadata_copy['log']['block']]
+        else:
+            epochs: list[dict] = metadata_copy['log']['block']
+        trials = [trial for epoch in epochs for trial in epoch['trial'] if
+                    not np.isnan(trial['start'])]
+        epoch_start_dts = [array_to_dt(epoch['start']) for epoch in epochs]
+        epoch_start_nwb: list[float] = [(epoch_start_dt - session_start_time).total_seconds()
+                            for epoch_start_dt in epoch_start_dts]
+
+        trial_starts = [trial['start'] + epoch_start_nwb[0] for trial in trials]
+        # TODO Figure out which time steps are we using here.
+
+        # Return this into an nd array
+
+        return np.array(trial_starts)
+
+
+    @override
+    def set_aligned_timestamps(self, aligned_timestamps: np.ndarray) -> np.ndarray:
+        self._times = aligned_timestamps
+
+
     def _get_session_start_time(self):
         session_start_time = array_to_dt(self._mat_dict['log']['session']['start'])
         return session_start_time
@@ -74,7 +112,6 @@ class VirmenDataInterface(BaseDataInterface):
 
         local_log_copy = deepcopy(self._mat_dict["log"])
         metadata = deepcopy(self._mat_dict)
-        session = local_log_copy["session"]
         # experimenter = [", ".join(session["experimenter"].split(" ")[::-1])]
         #! !TODO: Fetch the experimenter from the database
         experimenter = ["FAKE PERSON"]
@@ -270,9 +307,10 @@ class VirmenDataInterface(BaseDataInterface):
                                     data=trial_durations)
         trial_idx = [trial_id for num_trials in epoch_num_trials
                         for trial_id in np.arange(0, num_trials)]
+        # ruff: noqa
         nwbfile.add_trial_column(name='trial_id',
-                                    description='number of trial in block',
-                                    data=trial_idx)
+                        description='number of trial in block',
+                        data=trial_idx)
 
         trial_columns = [
             ( 'iterations', 'number of iterations (frames) for entire trial'),
@@ -281,10 +319,8 @@ class VirmenDataInterface(BaseDataInterface):
             ( 'iTurnEntry', 'iteration number when subject entered turn region'),
             ( 'iArmEntry', 'iteration number when subject entered arm region'),
             ( 'iBlank', 'iteration number when screen is turned off'),
-            ( 'excessTravel', 'total distance traveled during the trial '
-                             'normalized to the length of the maze'),
+            ( 'excessTravel', 'total distance traveled during the trial normalized to the length of the maze'),
             ( 'rewardScale', 'multiplier of reward for each correct trial'),
-
             ( 'StartCycle',	'The spatial frequency of the first stimulus shown to the mouse.'),
             ( 'EndCycle',	'The spatial frequency of the second stimulus shown to the mouse.'),
             ( 'rule',	'Specifies what the mouse should do to receive reward. Can be "StartCycle < EndCycle Left" or "StartCycle < EndCycle Right"'),
@@ -304,7 +340,7 @@ class VirmenDataInterface(BaseDataInterface):
             ( 'iLaserOff',	'Virmen iteration when laser is turn off (if it is, otherwise 0)'),
             ( 'moonDistHint',	'Distance from start at which moon beacon appears'),
             ( 'forcedChoice',	'Whether a trial is a forced choice L-maze environment, 0=T-maze, 1=L-maze'),
-                            ]
+                    ]
 
         for column_name, desc in trial_columns:
             data = [trial[column_name] for trial in trials if column_name in trial]
@@ -371,28 +407,45 @@ class VirmenDataInterface(BaseDataInterface):
         if 'baseCycles' in trials[0]:
             baseCycles = [trial['baseCycles'] if len(trial['baseCycles']) else trial['baseCycles'] for trial in trials]
 
-            trial_columns.append(( 'baseCycles',	'The base set of spatial frequencies from which StartCycle and EndCycle can be drawn.'))
-
+            trial_columns.append(
+                ("baseCycles", "The base set of spatial frequencies from which StartCycle and EndCycle can be drawn.")
+            )
 
         left_licks = []
         right_licks = []
 
-        if 'licks' in trials[0]:
+        if "licks" in trials[0]:
             for trial in trials:
-                left_stuff = trial['start'] + epoch_start_nwb[0] + trial['time'][(trial['licks'][0][(trial['licks'][1] == 1)] -1).astype(int).tolist()]
+                left_stuff = (
+                    trial["start"]
+                    + epoch_start_nwb[0]
+                    + trial["time"][(trial["licks"][0][(trial["licks"][1] == 1)] - 1).astype(int).tolist()]
+                )
                 left_licks.append(left_stuff)
-                right_stuff = trial['start'] + epoch_start_nwb[0] + trial['time'][(trial['licks'][0][(trial['licks'][1] == 2)] -1).astype(int).tolist()]
+                right_stuff = (
+                    trial["start"]
+                    + epoch_start_nwb[0]
+                    + trial["time"][(trial["licks"][0][(trial["licks"][1] == 2)] - 1).astype(int).tolist()]
+                )
                 right_licks.append(right_stuff)
 
-            trial_columns.extend([
-                ( 'left_licks', 'Offset times of left cues'),
-                ( 'right_licks', 'Offset times of right cues'),
-                ])
+            trial_columns.extend(
+                [
+                    ("left_licks", "Offset times of left cues"),
+                    ("right_licks", "Offset times of right cues"),
+                ]
+            )
 
-        if 'stimulusTable' in trial:
-
-            stimulusTable_columns = zip(*[(trial['stimulusTable'][:, i] if len(trial['stimulusTable']) else trial['stimulusTable']
-                                        for i in range(8)) for trial in trials])
+        if "stimulusTable" in trial:
+            stimulusTable_columns = zip(
+                *[
+                    (
+                        trial["stimulusTable"][:, i] if len(trial["stimulusTable"]) else trial["stimulusTable"]
+                        for i in range(8)
+                    )
+                    for trial in trials
+                ]
+            )
 
             # Unpack the transposed columns into separate variables
             (stimulusTable_pairNum, stimulusTable_prob, stimulusTable_side,
@@ -400,7 +453,7 @@ class VirmenDataInterface(BaseDataInterface):
             stimulusTable_cumulative_stimulus_hitrate, stimulusTable_stimulus_ntimes_shown,
             stimulusTable_stimulus_post_prob) = stimulusTable_columns
 
-            trial_columns.extend( [
+            stimulustable_column_descriptions = [
             ( 'stimulusTable_pairNum', 'row index'),
             ( 'stimulusTable_prob', 'Prior probability of each pair'),
             ( 'stimulusTable_freq_stimulus_one', 'Frequency of first stimulus'),
@@ -409,17 +462,39 @@ class VirmenDataInterface(BaseDataInterface):
             ( 'stimulusTable_stimulus_ntimes_shown', 'Number of times this pair has been shown'),
             ( 'stimulusTable_stimulus_post_prob', 'Posterior probability of showing this pair'),
             ( 'stimulusTable_side', 'Correct side for each pair'),
-            ])
+            ]
 
+            trial_columns.extend( stimulustable_column_descriptions )
+
+            # for num, trial_local in enumerate(trials, start = 1):
+            #     colnames = [x[0] for x in stimulustable_column_descriptions]
+            #     coldescrip = [x[1] for x in stimulustable_column_descriptions]
+            #     data = [VectorData(
+            #     data=trial_local['stimulusTable'][:, i],
+            #     name=colnames[i],
+            #     description = coldescrip[i],
+            #     ) for i in range(8)]
+            #     new_table_columns = DynamicTable(
+            #         name=f"stimulusTable_{num}",
+            #         description = f"stimulusTable for trial {num}",
+            #         colnames = [x[0] for x in stimulustable_column_descriptions],
+            #         columns = data,
+            #         )
+            #     nwbfile.trials.add_category(category=new_table_columns)
 
 
 
         for (variable_name, description) in trial_columns:
             try:
                 variable = locals()[variable_name]
-            except:
+            except Exception:
                 raise ValueError(f"No such variable as {variable_name} is defined.")
-            create_and_store_indexed_array(ndarray=variable, array_name=variable_name, description=description, nwbfile=nwbfile)
+            create_and_store_indexed_array(
+                ndarray=variable,
+                array_name=variable_name,
+                description=description,
+                nwbfile=nwbfile,
+            )
 
 
 
@@ -463,12 +538,12 @@ class VirmenDataInterface(BaseDataInterface):
             SpatialSeries(
                 name="SpatialSeries",
                 data=H5DataIO(pos_data, compression="gzip"),
-                reference_frame="(0,-80) is the start of the 'sample' region (or 'cue' region) which varies by maze and task.",
+                reference_frame="(0,-80) is the start of the 'sample' region (or 'cue' region) which varies by maze and task.",  # noqa: E501
                 description="The position of the animal by ViRMEN iteration.",
-                unit='cm',
+                unit="cm",
                 # conversion=0.01,
                 resolution=np.nan,
-                timestamps=H5DataIO(timestamps, compression="gzip")
+                timestamps=H5DataIO(timestamps, compression="gzip"),
             )
         )
         velocity_ts = TimeSeries(
