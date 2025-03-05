@@ -131,7 +131,7 @@ def create_indexed_array(ndarray):
 
     return flat_array, array_indices
 
-def create_and_store_indexed_array(ndarray, array_name, description, nwbfile):
+def create_and_store_indexed_array(ndarray, array_name, description, nwbfile: NWBFile):
 
     array_data, array_indices = create_indexed_array(ndarray)
 
