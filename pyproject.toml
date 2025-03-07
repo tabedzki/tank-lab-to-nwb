@@ -16,14 +16,15 @@ authors = [
 ]
 dependencies = [
     "h5py",
+    "hdmf>=4",
     "ipywidgets",
     "isodate",
     "ndx-tank-metadata",
-    "neuroconv",
+    "neuroconv[spikeglx,kilosort,openephys]",
     "notebook",
     "numpy",
     "nwbwidgets",
-    "pynwb",
+    "pynwb>=3",
     "spikeinterface>=0.102.1",
 ]
 
@@ -39,3 +40,13 @@ Homepage = "https://github.com/catalystneuro/tank-lab-to-nwb"
 include = [
     "/tank_lab_to_nwb",
 ]
+
+[tool.ruff]
+# Allow lines to be as long as 120.
+line-length = 120
+
+[tool.ruff.lint]
+select = ["NPY201"]
+
+[tool.uv.sources]
+ndx-tank-metadata = { path = "../ndx-tank-metadata", editable = true }

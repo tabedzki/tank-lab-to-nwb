@@ -1,27 +1,28 @@
 """Authors: Ben Dichter, Cody Baker."""
+
 import os
 import sys
+from collections.abc import Iterable
+from datetime import datetime
 from pathlib import Path
 from shutil import which
 
 import numpy as np
-from datetime import datetime
-from scipy.io import loadmat, matlab
-from collections.abc import Iterable
 from pynwb import NWBFile
-
+from scipy.io import loadmat, matlab
 
 try:
     from typing import ArrayLike
 except ImportError:
+    from typing import Sequence, Union
+
     from numpy import ndarray
-    from typing import Union, Sequence
 
     # adapted from numpy typing
     ArrayLike = Union[bool, int, float, complex, list, ndarray, Sequence]
 
 
-def check_module(nwbfile, name, description=None):
+def check_module(nwbfile: NWBFile, name, description=None):
     """
     Check if processing module exists. If not, create it. Then return module.
 
@@ -33,11 +34,10 @@ def check_module(nwbfile, name, description=None):
 
     Returns
     -------
-    pynwb.module
-
+    pynwb.processing
     """
-    if name in nwbfile.modules:
-        return nwbfile.modules[name]
+    if name in nwbfile.processing:
+        return nwbfile.processing[name]
     else:
         if description is None:
             description = name
@@ -62,7 +62,7 @@ def find_discontinuities(tt, factor=10000):
 def mat_obj_to_dict(mat_struct):
     """Recursive function to convert nested matlab struct objects to dictionaries."""
     dict_from_struct = {}
-    for field_name in mat_struct.__dict__['_fieldnames']:
+    for field_name in mat_struct.__dict__["_fieldnames"]:
         dict_from_struct[field_name] = mat_struct.__dict__[field_name]
         if isinstance(dict_from_struct[field_name], matlab.mio5_params.mat_struct):
             dict_from_struct[field_name] = mat_obj_to_dict(dict_from_struct[field_name])
@@ -90,8 +90,7 @@ def mat_obj_to_array(mat_struct_array):
 
 def has_struct(mat_struct_array):
     """Determines if a matlab cell array contains any mat objects."""
-    return any(
-        isinstance(mat_struct, matlab.mio5_params.mat_struct) for mat_struct in mat_struct_array)
+    return any(isinstance(mat_struct, matlab.mio5_params.mat_struct) for mat_struct in mat_struct_array)
 
 
 def convert_mat_file_to_dict(mat_file_name):
@@ -131,14 +130,11 @@ def create_indexed_array(ndarray):
 
     return flat_array, array_indices
 
-def create_and_store_indexed_array(ndarray, array_name, description, nwbfile: NWBFile):
 
+def create_and_store_indexed_array(ndarray, array_name, description, nwbfile: NWBFile):
     array_data, array_indices = create_indexed_array(ndarray)
 
-    nwbfile.add_trial_column(name=array_name,
-                            description=description,
-                            index=array_indices,
-                            data=array_data)
+    nwbfile.add_trial_column(name=array_name, description=description, index=array_indices, data=array_data)
 
 
 def flatten_nested_dict(nested_dict):
@@ -159,8 +155,8 @@ def flatten_nested_dict(nested_dict):
 
 def convert_function_handle_to_str(mat_file_path):
     """Executes a matlab script which converts function handle values to str
-     if matlab is installed on the system."""
-    matlab_class = '''
+    if matlab is installed on the system."""
+    matlab_class = """
     classdef Choice < uint32
 
         enumeration
@@ -194,8 +190,8 @@ def convert_function_handle_to_str(mat_file_path):
         end
 
     end
-    '''
-    matlab_code = r'''
+    """
+    matlab_code = r"""
     str_func = char(log.version.code);
     code_version = 'code_version.txt';
     fid = fopen(code_version, 'wt');
@@ -233,30 +229,30 @@ def convert_function_handle_to_str(mat_file_path):
     fclose(fid);
 
     quit;
-    '''
+    """
 
-    with Path('Choice.m').open('w') as f:
+    with Path("Choice.m").open("w") as f:
         f.write(matlab_class)
 
     metadata = {}
     convert_script_code = f"filePath = '{mat_file_path}';\nload(filePath);{matlab_code}"
     convert_script_path = Path("convert_function_to_txt.m")
 
-    with convert_script_path.open('w') as f:
+    with convert_script_path.open("w") as f:
         f.write(convert_script_code)
 
-    if 'win' in sys.platform and sys.platform != 'darwin':
-        matlab_cmd = '''
+    if "win" in sys.platform and sys.platform != "darwin":
+        matlab_cmd = """
                      #!/bin/bash
                      matlab -nosplash -wait -log -r convert_function_to_txt
-                     '''
+                     """
     else:
-        matlab_cmd = '''
+        matlab_cmd = """
                      #!/bin/bash
-                     matlab -nosplash -nodisplay -log -r convert_function_to_txt
-                     '''
+                     matlab -nosplash -nodisplay -log -batch convert_function_to_txt
+                     """
 
-    if which('matlab') is not None:
+    if which("matlab") is not None:
         try:
             os.system(matlab_cmd)
 
@@ -269,10 +265,10 @@ def convert_function_handle_to_str(mat_file_path):
             with open("trial_type.txt", "r") as f:
                 trial_type = f.read().splitlines()
 
-            metadata['experiment_name'] = version
-            metadata['protocol_name'] = protocol
-            metadata['trial_choice'] = trial_choice
-            metadata['trial_type'] = trial_type
+            metadata["experiment_name"] = version
+            metadata["protocol_name"] = protocol
+            metadata["trial_choice"] = trial_choice
+            metadata["trial_type"] = trial_type
 
             os.remove("code_version.txt")
             os.remove("protocol.txt")
@@ -282,8 +278,10 @@ def convert_function_handle_to_str(mat_file_path):
         except Exception as e:
             print(f"There was an error while trying to execute {convert_script_path}:\n{e}")
     else:
-        raise Exception("A working matlab version was not found. "
-              "Code version, animal protocol, type of trial, and choice could not be saved to NWB.")
+        raise Exception(
+            "A working matlab version was not found. "
+            "Code version, animal protocol, type of trial, and choice could not be saved to NWB."
+        )
 
     os.remove("Choice.m")
     os.remove("convert_function_to_txt.m")
