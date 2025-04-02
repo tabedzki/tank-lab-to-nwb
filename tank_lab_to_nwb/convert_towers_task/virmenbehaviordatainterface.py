@@ -71,12 +71,15 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
             (epoch_start_dt - session_start_time).total_seconds() for epoch_start_dt in epoch_start_dts
         ]
 
-        trial_starts = [trial["start"] + epoch_start_nwb[0] for trial in trials]
+        # trial_starts = [trial["start"] + epoch_start_nwb[0] for trial in trials]
+
+        frame_starts = [trial["start"] + epoch_start_nwb[0] + time for trial in trials for time in trial["time"]]
+
         # TODO Figure out which time steps are we using here.
 
         # Return this into an nd array
 
-        return np.array(trial_starts)
+        return np.array(frame_starts)
 
     @override
     def set_aligned_timestamps(self, aligned_timestamps: np.ndarray) -> np.ndarray:
