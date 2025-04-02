@@ -20,7 +20,7 @@ dependencies = [
     "ipywidgets",
     "isodate",
     "ndx-tank-metadata",
-    "neuroconv[spikeglx,kilosort,openephys]",
+    "neuroconv[kilosort,openephys,spikeglx]",
     "notebook",
     "numpy",
     "nwbwidgets",
@@ -50,3 +50,10 @@ select = ["NPY201"]
 
 [tool.uv.sources]
 ndx-tank-metadata = { path = "../ndx-tank-metadata", editable = true }
+
+[dependency-groups]
+dev = [
+    "datajoint>=0.14.3",
+    "ruff>=0.11.2",
+    "setuptools>=75.8.2",
+]
