@@ -367,33 +367,41 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
 
         right_cue_presence = [trial["cueCombo"][1] if len(trial["cueCombo"]) else trial["cueCombo"] for trial in trials]
 
-        left_cue_onset = [
-            trial["start"] + epoch_start_nwb[0] + trial["time"][trial["cueOnset"][0] - 1]
-            if np.any(trial["cueOnset"][0])
-            else trial["cueOnset"][0]
-            for trial in trials
-        ]
+        left_cue_onset = []
+        for trial in trials:
+            if np.any(trial["cueOnset"][0]):
+                indices = np.minimum(trial["cueOnset"][0], trial["cueOnset"][0] - 1)
+                left_cue_onset_time = trial["start"] + epoch_start_nwb[0] + trial["time"][indices]
+            else:
+                left_cue_onset_time = trial["cueOnset"][0]
+            left_cue_onset.append(left_cue_onset_time)
 
-        right_cue_onset = [
-            trial["start"] + epoch_start_nwb[0] + trial["time"][trial["cueOnset"][1] - 1]
-            if np.any(trial["cueOnset"][1])
-            else trial["cueOnset"][1]
-            for trial in trials
-        ]
+        right_cue_onset = []
+        for trial in trials:
+            if np.any(trial["cueOnset"][1]):
+                indices = np.minimum(trial["cueOnset"][1], trial["cueOnset"][1] - 1)
+                right_cue_onset_time = trial["start"] + epoch_start_nwb[0] + trial["time"][indices]
+            else:
+                right_cue_onset_time = trial["cueOnset"][1]
+            right_cue_onset.append(right_cue_onset_time)
 
-        left_cue_offset = [
-            trial["start"] + epoch_start_nwb[0] + trial["time"][trial["cueOffset"][0] - 1]
-            if np.any(trial["cueOffset"][0])
-            else trial["cueOffset"][0]
-            for trial in trials
-        ]
+        left_cue_offset = []
+        for trial in trials:
+            if np.any(trial["cueOffset"][0]):
+                indices = np.minimum(trial["cueOffset"][0], trial["cueOffset"][0] - 1)
+                left_cue_offset_time = trial["start"] + epoch_start_nwb[0] + trial["time"][indices]
+            else:
+                left_cue_offset_time = trial["cueOffset"][0]
+            left_cue_offset.append(left_cue_offset_time)
 
-        right_cue_offset = [
-            trial["start"] + epoch_start_nwb[0] + trial["time"][trial["cueOffset"][1] - 1]
-            if np.any(trial["cueOffset"][1])
-            else trial["cueOffset"][1]
-            for trial in trials
-        ]
+        right_cue_offset = []
+        for trial in trials:
+            if np.any(trial["cueOffset"][1]):
+                indices = np.minimum(trial["cueOffset"][1], trial["cueOffset"][1] - 1)
+                right_cue_offset_time = trial["start"] + epoch_start_nwb[0] + trial["time"][indices]
+            else:
+                right_cue_offset_time = trial["cueOffset"][1]
+            right_cue_offset.append(right_cue_offset_time)
 
         left_cue_position = [trial["cuePos"][0] if len(trial["cuePos"]) else trial["cuePos"] for trial in trials]
 
