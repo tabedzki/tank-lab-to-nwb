@@ -4,16 +4,21 @@ from copy import deepcopy
 from datetime import timedelta
 from pathlib import Path
 from typing import override
+from zoneinfo import ZoneInfo
 
 import numpy as np
 from hdmf.backends.hdf5.h5_utils import H5DataIO
+
+# from ndx_tank_metadata import LabMetaDataExtension, MazeExtension, RigExtension, StimulusTable
 from ndx_tank_metadata import LabMetaDataExtension, MazeExtension, RigExtension
 
 # from neuroconv.basedatainterface import BaseData
 from neuroconv.basetemporalalignmentinterface import BaseTemporalAlignmentInterface
-from neuroconv.utils import FilePathType, dict_deep_update
+from neuroconv.utils import dict_deep_update
+from pydantic import FilePath
 from neuroconv.utils.dict import DeepDict
 from pynwb import NWBFile, TimeSeries
+from pynwb.core import DynamicTable
 from pynwb.behavior import CompassDirection, Position, SpatialSeries
 
 from ..utils import (
@@ -29,11 +34,11 @@ from ..utils import (
 class VirmenDataInterface(BaseTemporalAlignmentInterface):
     """Conversion class for Virmen behavioral data."""
 
-    def __init__(self, file_path: FilePathType, verbose: bool = True):
+    def __init__(self, file_path: FilePath, verbose: bool = True):
         """
         Parameters
         ----------
-        file_path : FilePathType
+        file_path : FilePath
             Path to virman .mat file.
         verbose : bool, default: True
             Whether to output verbose text.
@@ -75,19 +80,47 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
 
         frame_starts = [trial["start"] + epoch_start_nwb[0] + time for trial in trials for time in trial["time"]]
 
-        # TODO Figure out which time steps are we using here.
+        # Calculate absolute timestamps for each frame across all trials and epochs
+        # Each frame timestamp is relative to session start time
+        frame_timestamps = []
+        for epoch_idx, epoch in enumerate(epochs):
+            epoch_offset = epoch_start_nwb[epoch_idx]
+            for trial in epoch["trial"]:
+                if not np.isnan(trial["start"]):
+                    # Each frame's timestamp = epoch_start + trial_start + frame_time
+                    trial_frame_times = trial["start"] + epoch_offset + trial["time"]
+                    frame_timestamps.extend(trial_frame_times)
+
+        frame_starts = frame_timestamps
 
         # Return this into an nd array
 
         return np.array(frame_starts)
 
     @override
-    def set_aligned_timestamps(self, aligned_timestamps: np.ndarray) -> np.ndarray:
+    def set_aligned_timestamps(self, aligned_timestamps: np.ndarray) -> None:
         self._times = aligned_timestamps
 
     def _get_session_start_time(self):
-        session_start_time = array_to_dt(self._mat_dict["log"]["session"]["start"])
+        session_start_time = array_to_dt(self._mat_dict["log"]["session"]["start"]).replace(
+            tzinfo=ZoneInfo("America/New_York")
+        )
         return session_start_time
+
+    def get_session_key(self) -> dict:
+        """
+        Extract session key information from the Virmen .mat file for DataJoint queries.
+
+        Returns
+        -------
+        dict
+            Dictionary containing 'subject_fullname' and 'session_date' for querying DataJoint.
+        """
+        subject_fullname = self._mat_dict["log"]["animal"]["name"]
+        session_start_time = self._get_session_start_time()
+        session_date = session_start_time.date()
+
+        return {"subject_fullname": subject_fullname, "session_date": session_date}
 
     @classmethod
     def get_source_schema(cls):
@@ -103,21 +136,36 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
 
         local_log_copy = deepcopy(self._mat_dict["log"])
         metadata = deepcopy(self._mat_dict)
-        # experimenter = [", ".join(session["experimenter"].split(" ")[::-1])]
-        #! !TODO: Fetch the experimenter from the database
-        experimenter = ["FAKE PERSON"]
+
+        # Note: Experimenter information should be provided via metadata override from external sources
+        # (e.g., DataJoint queries in notebook/script) rather than queried here.
+        # This keeps the interface modular and usable without database dependencies.
+
+        # Commented out DataJoint database call:
+        # try:
+        #     import datajoint as dj
+        #     subject = dj.create_virtual_module("subject", "u19_subject")
+        #     lab = dj.create_virtual_module("lab", "u19_lab")
+        #     subject_fullname = metadata["log"]["animal"]["name"]
+        #     sub_info = (subject.Subject() * lab.User() & f"subject_fullname = '{subject_fullname}'").fetch1()
+        #     owner = [sub_info["user_id"]]
+        #     coowners = list(
+        #         (subject.SubjectCoowners() & f"subject_fullname = '{subject_fullname}' and active = 1").fetch("coowner")
+        #     )
+        #     experimenter = owner + coowners
+        # except Exception as e:
+        #     if self.verbose:
+        #         print(f"Could not import datajoint, setting experimenter to FAKE PERSON. Error: {e}")
+        #     experimenter = []
+
         session_start_time = self._get_session_start_time()
 
         metadata_from_mat_dict = dict(
             Subject=dict(subject_id=local_log_copy["animal"]),
-            NWBFile=dict(experimenter=experimenter, session_start_time=session_start_time),
+            NWBFile=dict(session_start_time=session_start_time),
         )
 
         metadata = dict_deep_update(super_metadata, metadata_from_mat_dict, copy=True)
-        # super_metadata.add(metadata)
-
-        # metadata = dict_deep_update(super_metadata, metadata, copy=True)
-        # metadata = dict_deep_update(super_metadata, metadata_from_mat_dict, copy=True)
 
         return metadata
 
@@ -192,7 +240,9 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
             )
 
         num_trials = len(trials)
-        session_end_time = array_to_dt(metadata_copy["log"]["session"]["end"]).isoformat()
+        session_end_time = (
+            array_to_dt(metadata_copy["log"]["session"]["end"]).replace(tzinfo=ZoneInfo("America/New_York")).isoformat()
+        )
         converted_metadata = convert_function_handle_to_str(mat_file_path=self.source_data["file_path"])
 
         lab_meta_data = dict(
@@ -225,19 +275,53 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
 
         session_start_time = self._get_session_start_time()
 
-        epoch_start_dts = [array_to_dt(epoch["start"]) for epoch in epochs]
+        # Calculate epoch times from Virmen data (default)
+        epoch_start_dts = [array_to_dt(epoch["start"]).replace(tzinfo=ZoneInfo("America/New_York")) for epoch in epochs]
         epoch_durations_dts = [timedelta(seconds=epoch["duration"]) for epoch in epochs]
-        epoch_start_nwb = [(epoch_start_dt - session_start_time).total_seconds() for epoch_start_dt in epoch_start_dts]
-        epoch_end_nwb = [
+        epoch_start_nwb_virmen = [
+            (epoch_start_dt - session_start_time).total_seconds() for epoch_start_dt in epoch_start_dts
+        ]
+        epoch_end_nwb_virmen = [
             (epoch_start_dt - session_start_time + epoch_duration).total_seconds()
             for epoch_start_dt, epoch_duration in zip(epoch_start_dts, epoch_durations_dts)
         ]
+
+        # Check if we have synchronized timestamps - if so, recalculate from them
+        all_timestamps = self.get_timestamps()
+        use_sync_times = self._times is not None  # True if set_aligned_timestamps was called
+
+        if use_sync_times:
+            # Recalculate epoch start/end from synchronized frame timestamps
+            epoch_start_nwb = []
+            epoch_end_nwb = []
+            current_frame_idx = 0
+
+            for epoch in epochs:
+                # Count frames in this epoch
+                epoch_frame_count = sum(len(trial["time"]) for trial in epoch["trial"] if not np.isnan(trial["start"]))
+
+                if epoch_frame_count > 0:
+                    epoch_start = all_timestamps[current_frame_idx]
+                    epoch_end = all_timestamps[current_frame_idx + epoch_frame_count - 1]
+                    epoch_start_nwb.append(epoch_start)
+                    epoch_end_nwb.append(epoch_end)
+                    current_frame_idx += epoch_frame_count
+                else:
+                    # Fallback to Virmen times if no frames
+                    epoch_idx = epochs.index(epoch)
+                    epoch_start_nwb.append(epoch_start_nwb_virmen[epoch_idx])
+                    epoch_end_nwb.append(epoch_end_nwb_virmen[epoch_idx])
+        else:
+            # Use Virmen internal timing
+            epoch_start_nwb = epoch_start_nwb_virmen
+            epoch_end_nwb = epoch_end_nwb_virmen
+
         for j, (start, end) in enumerate(zip(epoch_start_nwb, epoch_end_nwb)):
             nwbfile.add_epoch(start_time=start, stop_time=end, label="Epoch" + str(j + 1))
 
         epoch_maze_ids = [epoch["mazeID"] for epoch in epochs]
         epoch_main_maze_ids = [epoch["mainMazeID"] for epoch in epochs]
-        epoch_easy_flag = [epoch["easyBlockFlag"] for epoch in epochs]
+        epoch_easy_flag = [bool(epoch["easyBlockFlag"]) for epoch in epochs]
         epoch_first_trial = [epoch["firstTrial"] for epoch in epochs]
         epoch_num_trials = []
         for epoch in epochs:
@@ -257,7 +341,7 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
         )
         nwbfile.add_epoch_column(
             name="easy_epoch",
-            description="1 if block was flagged as easy (maze_id < main_maze_id)",
+            description="True if block was flagged as easy (maze_id < main_maze_id)",
             data=epoch_easy_flag,
         )
         nwbfile.add_epoch_column(name="first_trial", description="first trial run in an epoch", data=epoch_first_trial)
@@ -297,9 +381,33 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
         # ------------------------- Adding trial information ------------------------- #
         # -------- This information stays the same throughout the specific trial ------ #
 
-        trial_starts = [trial["start"] + epoch_start_nwb[0] for trial in trials]
         trial_durations = [trial["duration"] for trial in trials]
-        trial_ends = [start_time + duration for start_time, duration in zip(trial_starts, trial_durations)]
+
+        # Check if we should use synchronized timestamps or Virmen internal timing
+        if use_sync_times:
+            # Recalculate trial start/end times from synchronized timestamps
+            trial_starts = []
+            trial_ends = []
+
+            current_frame_idx = 0
+            for trial in trials:
+                trial_frame_count = len(trial["time"])
+
+                # Trial start is the timestamp of the first frame
+                trial_start = all_timestamps[current_frame_idx]
+
+                # Trial end is the timestamp of the last frame
+                trial_end = all_timestamps[current_frame_idx + trial_frame_count - 1]
+
+                trial_starts.append(trial_start)
+                trial_ends.append(trial_end)
+
+                current_frame_idx += trial_frame_count
+        else:
+            # Use Virmen internal timing (default)
+            trial_starts = [trial["start"] + epoch_start_nwb[0] for trial in trials]
+            trial_ends = [start_time + duration for start_time, duration in zip(trial_starts, trial_durations)]
+
         for k in range(len(trial_starts)):
             nwbfile.add_trial(start_time=trial_starts[k], stop_time=trial_ends[k])
 
@@ -482,12 +590,12 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
             stimulustable_column_descriptions = [
                 ("stimulusTable_pairNum", "row index"),
                 ("stimulusTable_prob", "Prior probability of each pair"),
+                ("stimulusTable_side", "Correct side for each pair"),
                 ("stimulusTable_freq_stimulus_one", "Frequency of first stimulus"),
                 ("stimulusTable_freq_stimulus_two", "Frequency of second stimulus"),
                 ("stimulusTable_cumulative_stimulus_hitrate", "Cumulative hitrate for this stimulus pair"),
                 ("stimulusTable_stimulus_ntimes_shown", "Number of times this pair has been shown"),
                 ("stimulusTable_stimulus_post_prob", "Posterior probability of showing this pair"),
-                ("stimulusTable_side", "Correct side for each pair"),
             ]
 
             trial_columns.extend(stimulustable_column_descriptions)
@@ -511,30 +619,48 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
         for variable_name, description in trial_columns:
             try:
                 variable = locals()[variable_name]
-            except Exception:
-                raise ValueError(f"No such variable as {variable_name} is defined.")
-            create_and_store_indexed_array(
-                ndarray=variable,
-                array_name=variable_name,
-                description=description,
-                nwbfile=nwbfile,
-            )
+            except Exception as e:
+                if self.verbose:
+                    print(f"Warning: Variable {variable_name} not found, skipping. Error: {e}")
+                continue
+            try:
+                create_and_store_indexed_array(
+                    ndarray=variable,
+                    array_name=variable_name,
+                    description=description,
+                    nwbfile=nwbfile,
+                )
+            except Exception as e:
+                if self.verbose:
+                    print(f"Warning: Failed to add indexed array for {variable_name}: {e}")
+                # Re-raise to see what's happening
+                raise
 
         # ------------------ Processed position, velocity, viewAngle ----------------- #
         # ---------- This information changes throughout the specific trial ----------- #
 
+        if self.verbose:
+            print("Adding behavioral timeseries data (Position, ViewAngle, Velocity, Collision)...")
+
+        # Use aligned timestamps if available (from temporal alignment), otherwise use original timestamps
+        all_timestamps = self.get_timestamps()
+
         pos_obj = Position(name="Position")
         view_angle_obj = CompassDirection(name="ViewAngle")
 
-        timestamps = []
         pos_data = np.empty((0, 2))
         velocity_data = np.empty_like(pos_data)
         view_angle_data = []
         collision = []
+        timestamp_indices = []  # Track which timestamps correspond to each frame
 
+        current_timestamp_idx = 0
         for trial in trials:
-            trial_total_time = trial["start"] + epoch_start_nwb[0] + trial["time"]
-            timestamps.extend(trial_total_time.astype(np.float64, casting="same_kind"))
+            # Track indices for this trial's frames
+            trial_frame_count = len(trial["time"])
+            trial_indices = list(range(current_timestamp_idx, current_timestamp_idx + trial_frame_count))
+            timestamp_indices.extend(trial_indices)
+            current_timestamp_idx += trial_frame_count
 
             # Padding exists since the time array is longer than all the other arrays.
             # The other arrays are all the same length
@@ -548,6 +674,10 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
             view_angle_data = np.concatenate([view_angle_data, trial_view_angle, padding[:, 0]], axis=0)
             collision = np.concatenate([collision, trial_collision, padding[:, 0]], axis=0)
 
+        # Slice timestamps to match the data length
+        timestamps = all_timestamps[timestamp_indices]
+
+        # Create a Time timeseries for explicit time values
         time = TimeSeries(
             name="Time",
             data=H5DataIO(timestamps, compression="gzip"),
@@ -558,7 +688,7 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
 
         pos_obj.add_spatial_series(
             SpatialSeries(
-                name="SpatialSeries",
+                name="Position",
                 data=H5DataIO(pos_data, compression="gzip"),
                 reference_frame="(0,-80) is the start of the 'sample' region (or 'cue' region) which varies by maze and task.",  # noqa: E501
                 description="The position of the animal by ViRMEN iteration.",
@@ -579,7 +709,7 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
 
         view_angle_obj.add_spatial_series(
             SpatialSeries(
-                name="SpatialSeries",
+                name="ViewAngle",
                 data=H5DataIO(view_angle_data, compression="gzip"),
                 reference_frame="unknown",
                 description="The velocity view angle of the animal by ViRMEN iteration in the unit of degrees.",
@@ -598,10 +728,14 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
         )
 
         behavioral_processing_module = check_module(nwbfile, "behavior", "contains processed behavioral data")
-        behavioral_processing_module.add_data_interface(pos_obj)
-        behavioral_processing_module.add_data_interface(velocity_ts)
-        behavioral_processing_module.add_data_interface(view_angle_obj)
-        behavioral_processing_module.add_data_interface(time)
-        behavioral_processing_module.add_data_interface(collision_ts)
+        behavioral_processing_module.add(pos_obj)
+        behavioral_processing_module.add(velocity_ts)
+        behavioral_processing_module.add(view_angle_obj)
+        behavioral_processing_module.add(time)
+        behavioral_processing_module.add(collision_ts)
+
+        if self.verbose:
+            print(f"✓ Added {len(behavioral_processing_module.data_interfaces)} behavioral data interfaces to NWB file")
+            print(f"  Data samples: {len(pos_data)}, Timestamps: {len(timestamps)}")
 
         return nwbfile

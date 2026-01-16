@@ -8,12 +8,25 @@ NWB conversion scripts and tutorials. A collaboration with the [Tank lab](https:
 pip install tank-lab-to-nwb
 ```
 
+## Ephys-Behavior Synchronization
+
+This converter integrates with the U19 DataJoint pipeline to access pre-computed synchronized timestamps between Virmen behavioral data and NIDQ/IMEC electrophysiology recordings.
+
+### Synchronization Data Structure
+
+The `BehaviorSync` table stores compact synchronization data in the `sync_data` field:
+- **trial_idx_vector**: NIDQ sample indices where each trial starts
+- **iteration_idx_vector**: Frame-by-frame NIDQ sample indices for each trial (array of arrays)
+- Fallback versions using Virmen timestamps when pulse-based sync fails
+
+See [SYNC_DATA_PLAN.md](SYNC_DATA_PLAN.md) for detailed documentation on the synchronization architecture.
+
 ## Usage
 
 There are two ways to go about converting Neuropixel and Virmen behavior data.
 
 (1) The **primary processing pipeline** synchronizes the task data with the electrophysiology data
-   through  TTL pulse and writes the spiking output to the same NWB file.
+   through TTL pulse and writes the spiking output to the same NWB file.
 
 The required arguments for the use of the relevant functions are denoted in the comments of their
 respective sections of the conversion script. These include the file or
