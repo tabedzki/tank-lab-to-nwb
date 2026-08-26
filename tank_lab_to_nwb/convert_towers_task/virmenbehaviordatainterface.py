@@ -71,7 +71,13 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
         else:
             epochs: list[dict] = metadata_copy["log"]["block"]
         trials = [trial for epoch in epochs for trial in epoch["trial"] if not np.isnan(trial["start"])]
-        epoch_start_dts = [array_to_dt(epoch["start"]) for epoch in epochs]
+        # array_to_dt returns a naive datetime while _get_session_start_time is
+        # tz-aware, so the subtraction below raised TypeError. It only ever
+        # surfaced when get_original_timestamps() actually ran, which a caller
+        # supplying sync_timestamps skips — imaging-only sessions do not supply
+        # one, so they hit it immediately.
+        session_tz = session_start_time.tzinfo
+        epoch_start_dts = [array_to_dt(epoch["start"]).replace(tzinfo=session_tz) for epoch in epochs]
         epoch_start_nwb: list[float] = [
             (epoch_start_dt - session_start_time).total_seconds() for epoch_start_dt in epoch_start_dts
         ]
