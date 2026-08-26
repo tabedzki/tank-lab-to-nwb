@@ -70,8 +70,9 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
             epochs: list[dict] = [metadata_copy["log"]["block"]]
         else:
             epochs: list[dict] = metadata_copy["log"]["block"]
+
         trials = [trial for epoch in epochs for trial in epoch["trial"] if not np.isnan(trial["start"])]
-        epoch_start_dts = [array_to_dt(epoch["start"]) for epoch in epochs]
+        epoch_start_dts = [array_to_dt(epoch["start"]).replace(tzinfo=ZoneInfo("America/New_York")) for epoch in epochs]
         epoch_start_nwb: list[float] = [
             (epoch_start_dt - session_start_time).total_seconds() for epoch_start_dt in epoch_start_dts
         ]
@@ -564,57 +565,55 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
                 ]
             )
 
-        if "stimulusTable" in trial:
-            stimulusTable_columns = zip(
-                *[
-                    (
-                        trial["stimulusTable"][:, i] if len(trial["stimulusTable"]) else trial["stimulusTable"]
-                        for i in range(8)
-                    )
-                    for trial in trials
-                ]
-            )
+        # Create StimulusTable groups for each trial that has stimulus table data
+        stimulus_processing_module = check_module(nwbfile, "stimulus", "contains stimulus table data for trials")
 
-            # Unpack the transposed columns into separate variables
-            (
-                stimulusTable_pairNum,
-                stimulusTable_prob,
-                stimulusTable_side,
-                stimulusTable_freq_stimulus_one,
-                stimulusTable_freq_stimulus_two,
-                stimulusTable_cumulative_stimulus_hitrate,
-                stimulusTable_stimulus_ntimes_shown,
-                stimulusTable_stimulus_post_prob,
-            ) = stimulusTable_columns
+        for trial_idx, trial in enumerate(trials):
+            if "stimulusTable" in trial and len(trial["stimulusTable"]) > 0:
+                # Extract the 8 columns from the stimulus table
+                stimulus_data = trial["stimulusTable"]
 
-            stimulustable_column_descriptions = [
-                ("stimulusTable_pairNum", "row index"),
-                ("stimulusTable_prob", "Prior probability of each pair"),
-                ("stimulusTable_side", "Correct side for each pair"),
-                ("stimulusTable_freq_stimulus_one", "Frequency of first stimulus"),
-                ("stimulusTable_freq_stimulus_two", "Frequency of second stimulus"),
-                ("stimulusTable_cumulative_stimulus_hitrate", "Cumulative hitrate for this stimulus pair"),
-                ("stimulusTable_stimulus_ntimes_shown", "Number of times this pair has been shown"),
-                ("stimulusTable_stimulus_post_prob", "Posterior probability of showing this pair"),
-            ]
+                # Create a StimulusTable for this trial
+                stimulus_table = StimulusTable(
+                    name=f"trial_{trial_idx}_stimulus_table", description=f"Stimulus table for trial {trial_idx}"
+                )
 
-            trial_columns.extend(stimulustable_column_descriptions)
+                # Add the 8 columns according to the schema
+                stimulus_table.add_column(
+                    name="stimulusPairIndex",
+                    description="First column description",
+                    data=stimulus_data[:, 0].astype(int),
+                )
+                stimulus_table.add_column(
+                    name="priorProb", description="Second column description", data=stimulus_data[:, 1].astype(float)
+                )
+                stimulus_table.add_column(
+                    name="Side",
+                    description="Third column description",
+                    data=[str(side) for side in stimulus_data[:, 2]],
+                )
+                stimulus_table.add_column(
+                    name="Sa", description="Fourth column description", data=stimulus_data[:, 3].astype(int)
+                )
+                stimulus_table.add_column(
+                    name="Sb", description="Fifth column description", data=stimulus_data[:, 4].astype(int)
+                )
+                stimulus_table.add_column(
+                    name="FracHit",
+                    description="Sixth column description (can be NaN)",
+                    data=stimulus_data[:, 5].astype(int),
+                )
+                stimulus_table.add_column(
+                    name="Ntotal", description="Seventh column description", data=stimulus_data[:, 6].astype(int)
+                )
+                stimulus_table.add_column(
+                    name="posteriorProb",
+                    description="Eighth column description",
+                    data=stimulus_data[:, 7].astype(float),
+                )
 
-            # for num, trial_local in enumerate(trials, start = 1):
-            #     colnames = [x[0] for x in stimulustable_column_descriptions]
-            #     coldescrip = [x[1] for x in stimulustable_column_descriptions]
-            #     data = [VectorData(
-            #     data=trial_local['stimulusTable'][:, i],
-            #     name=colnames[i],
-            #     description = coldescrip[i],
-            #     ) for i in range(8)]
-            #     new_table_columns = DynamicTable(
-            #         name=f"stimulusTable_{num}",
-            #         description = f"stimulusTable for trial {num}",
-            #         colnames = [x[0] for x in stimulustable_column_descriptions],
-            #         columns = data,
-            #         )
-            #     nwbfile.trials.add_category(category=new_table_columns)
+                # Add the stimulus table to the processing module
+                stimulus_processing_module.add_data_interface(stimulus_table)
 
         for variable_name, description in trial_columns:
             try:

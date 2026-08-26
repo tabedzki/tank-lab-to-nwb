@@ -19,7 +19,7 @@ dependencies = [
     "hdmf>=4",
     "ipywidgets",
     "isodate",
-    "ndx-tank-metadata",
+    "ndx-tank-metadata>=0.2.0",
     "neuroconv[kilosort,openephys,spikeglx]",
     "notebook",
     "numpy",
@@ -49,10 +49,6 @@ line-length = 120
 [tool.ruff.lint]
 select = ["NPY201"]
 
-[tool.uv.sources]
-ndx-tank-metadata = { path = "../ndx-tank-metadata-clean", editable = true }
-u19-pipeline = { path = "../U19-pipeline_python", editable = true }
-
 [dependency-groups]
 dev = [
     "datajoint>=0.14.3",
@@ -67,4 +63,8 @@ dev = [
 [tool.pytest.ini_options]
 addopts = "--doctest-modules"
 testpaths = ["tests"]
+
+[tool.uv.sources]
+ndx-tank-metadata = { path = "../ndx-tank-metadata-clean", editable = true }
+u19-pipeline = { path = "../U19-pipeline_python", editable = true }
 

@@ -144,7 +144,7 @@ def flatten_nested_dict(nested_dict):
         if isinstance(v, dict):
             if v:
                 flatten_sub_dict = flatten_nested_dict(v).items()
-                flatten_dict.update({k2: v2 for k2, v2 in flatten_sub_dict})
+                flatten_dict.update(dict(flatten_sub_dict))
             else:
                 flatten_dict[k] = np.array([])
         else:
@@ -287,3 +287,15 @@ def convert_function_handle_to_str(mat_file_path):
     os.remove("convert_function_to_txt.m")
 
     return metadata
+
+
+def fetch_coowners(subject_fullname: str):
+    if subject_fullname is None:
+        return None
+    return (subject.SubjectCoowners() & f"subject_fullname = '{subject_fullname}' and active = 1").fetch("coowner")
+
+
+def fetch_owner(subject_fullname: str):
+    if subject_fullname is None:
+        return None
+    return (subject.Subject() & f"subject_fullname = '{subject_fullname}'").fetch()

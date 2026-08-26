@@ -3,4 +3,4 @@ from .convert_towers_task.towersnwbconverter import (
     VirmenDataInterface,
 )
 
-__all__ = [TowersNWBConverter, VirmenDataInterface]
+__all__ = ["TowersNWBConverter", "VirmenDataInterface"]
