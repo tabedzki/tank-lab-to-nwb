@@ -32,7 +32,8 @@ class TowersNWBConverter(NWBConverter):
     - SpikeGLXAP/SpikeGLXLFP (optional): Electrophysiology recordings
     - Kilosort (optional): Spike sorting data
     - Suite2pSegmentation (optional): Calcium imaging segmentation
-    - ScanImageImaging (optional): Raw ScanImage two-photon data
+    - ScanImageImaging (optional): Raw ScanImage two-photon data. For multiple
+      fields of view use "ScanImageImagingFOV0", "ScanImageImagingFOV1", etc.
     - TiffImaging (optional): Raw imaging data from a generic TIFF
     """
 
@@ -89,11 +90,26 @@ class TowersNWBConverter(NWBConverter):
             offset added first. See docs/imaging_behavior_sync.md section 6 in
             U19-pipeline-python.
         """
+        # Copy onto the instance before registering anything dynamic:
+        # data_interface_classes is a class attribute, so mutating it in place
+        # leaked every session's probes and fields of view into the next
+        # converter built in the same process.
+        self.data_interface_classes = dict(self.data_interface_classes)
+
         # Dynamically add Kilosort interfaces for multiple probes
         # Check for any keys starting with "Kilosort" (e.g., "KilosortProbe0", "KilosortProbe1")
         for key in source_data.keys():
             if key.startswith("Kilosort") and key not in self.data_interface_classes:
                 self.data_interface_classes[key] = KiloSortWithProbeInterface
+
+        # Same for imaging: a mesoscope session has one field of view per
+        # TiffSplit ("ScanImageImagingFOV0", "ScanImageImagingFOV1", ...). Each
+        # is a distinct region and gets its own interface and TwoPhotonSeries --
+        # concatenating them into one interface would present unrelated fields
+        # of view as a single continuous recording.
+        for key in source_data.keys():
+            if key.startswith("ScanImageImaging") and key not in self.data_interface_classes:
+                self.data_interface_classes[key] = ScanImageImagingInterface
 
         super().__init__(source_data=source_data)
 
