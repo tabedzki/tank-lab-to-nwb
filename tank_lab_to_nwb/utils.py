@@ -60,12 +60,21 @@ def find_discontinuities(tt, factor=10000):
 
 
 def mat_obj_to_dict(mat_struct):
-    """Recursive function to convert nested matlab struct objects to dictionaries."""
+    """Recursive function to convert nested matlab struct objects to dictionaries.
+    
+    Handles special cases like shapingProtocol and other mat_struct objects that don't 
+    convert cleanly by extracting string representations of function names.
+    """
     dict_from_struct = {}
     for field_name in mat_struct.__dict__["_fieldnames"]:
         dict_from_struct[field_name] = mat_struct.__dict__[field_name]
         if isinstance(dict_from_struct[field_name], matlab.mio5_params.mat_struct):
-            dict_from_struct[field_name] = mat_obj_to_dict(dict_from_struct[field_name])
+            # Try to convert nested mat_struct objects; if it fails, store as string representation
+            try:
+                dict_from_struct[field_name] = mat_obj_to_dict(dict_from_struct[field_name])
+            except (AttributeError, KeyError):
+                # For protocol functions and other unconvertible objects, extract string representation
+                dict_from_struct[field_name] = str(dict_from_struct[field_name])
         elif isinstance(dict_from_struct[field_name], matlab.MatlabFunction):
             dict_from_struct[field_name] = str(dict_from_struct[field_name])
         elif isinstance(dict_from_struct[field_name], np.ndarray):
