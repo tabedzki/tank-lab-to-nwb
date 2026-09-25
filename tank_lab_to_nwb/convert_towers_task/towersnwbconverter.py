@@ -57,6 +57,7 @@ class TowersNWBConverter(NWBConverter):
         ttl_source: Optional[PathType] = None,
         sync_timestamps: Optional[np.ndarray] = None,
         aligned_timestamps: Optional[dict] = None,
+        sample_ranges: Optional[dict] = None,
     ):
         """
         Initialize the NWBConverter object.
@@ -89,6 +90,13 @@ class TowersNWBConverter(NWBConverter):
             quantities are zeroed at *block* start and need the block-vs-session
             offset added first. See docs/imaging_behavior_sync.md section 6 in
             U19-pipeline-python.
+        sample_ranges : dict, optional
+            Per-interface half-open (start, stop) sample ranges, keyed by
+            interface name, e.g. {"ScanImageImagingFOV0Plane0": (548, 17_800)}.
+            Each named imaging interface is cut to that range before anything is
+            written, so frames outside it (imaging recorded before or after the
+            behavior) are left out of the file. Any aligned_timestamps given
+            for the same interface must already cover exactly that range.
         """
         # Copy onto the instance before registering anything dynamic:
         # data_interface_classes is a class attribute, so mutating it in place
@@ -126,6 +134,28 @@ class TowersNWBConverter(NWBConverter):
         }
 
         super().__init__(source_data=source_data)
+
+        for name, (start, stop) in (sample_ranges or {}).items():
+            if name not in self.data_interface_objects:
+                raise ValueError(
+                    f"sample_ranges names an interface that is not in source_data: {name!r}."
+                )
+            interface = self.data_interface_objects[name]
+            n_samples = interface.imaging_extractor.get_num_samples()
+            if not 0 <= start < stop <= n_samples:
+                raise ValueError(
+                    f"sample_ranges[{name!r}] = ({start}, {stop}) is outside the "
+                    f"interface's {n_samples} samples."
+                )
+            parent = interface.imaging_extractor
+            sliced = parent.slice_samples(start_sample=start, end_sample=stop)
+            # ScanImageImagingInterface reads these straight off its extractor
+            # (session start time from file_path, header metadata from
+            # _general_metadata); the sliced wrapper does not forward them.
+            for attr in ("file_path", "_general_metadata"):
+                if hasattr(parent, attr):
+                    setattr(sliced, attr, getattr(parent, attr))
+            interface.imaging_extractor = sliced
 
         # Check that VirmenData interface is present
         if "VirmenData" not in self.data_interface_objects:
