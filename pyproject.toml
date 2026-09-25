@@ -27,6 +27,9 @@ dependencies = [
     "pynwb>=3",
     "spikeinterface>=0.102.1",
     "u19-pipeline[pipeline]",
+    # neuroconv<=0.10.2 uses the zarr 2 API at import; hdmf-zarr>=0.14 pulls zarr 3.
+    # Drop once neuroconv supports zarr 3 (catalystneuro/neuroconv#1749).
+    "zarr<3",
 ]
 
 requires-python = ">=3.12,<3.14"
