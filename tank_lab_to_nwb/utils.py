@@ -62,12 +62,21 @@ def find_discontinuities(tt, factor=10000):
 
 
 def mat_obj_to_dict(mat_struct):
-    """Recursive function to convert nested matlab struct objects to dictionaries."""
+    """Recursive function to convert nested matlab struct objects to dictionaries.
+    
+    Handles special cases like shapingProtocol and other mat_struct objects that don't 
+    convert cleanly by extracting string representations of function names.
+    """
     dict_from_struct = {}
     for field_name in mat_struct.__dict__["_fieldnames"]:
         dict_from_struct[field_name] = mat_struct.__dict__[field_name]
         if isinstance(dict_from_struct[field_name], matlab.mio5_params.mat_struct):
-            dict_from_struct[field_name] = mat_obj_to_dict(dict_from_struct[field_name])
+            # Try to convert nested mat_struct objects; if it fails, store as string representation
+            try:
+                dict_from_struct[field_name] = mat_obj_to_dict(dict_from_struct[field_name])
+            except (AttributeError, KeyError):
+                # For protocol functions and other unconvertible objects, extract string representation
+                dict_from_struct[field_name] = str(dict_from_struct[field_name])
         elif isinstance(dict_from_struct[field_name], matlab.MatlabFunction):
             dict_from_struct[field_name] = str(dict_from_struct[field_name])
         elif isinstance(dict_from_struct[field_name], np.ndarray):
@@ -146,7 +155,7 @@ def flatten_nested_dict(nested_dict):
         if isinstance(v, dict):
             if v:
                 flatten_sub_dict = flatten_nested_dict(v).items()
-                flatten_dict.update({k2: v2 for k2, v2 in flatten_sub_dict})
+                flatten_dict.update(dict(flatten_sub_dict))
             else:
                 flatten_dict[k] = np.array([])
         else:
@@ -287,3 +296,15 @@ def convert_function_handle_to_str(mat_file_path):
             )
 
     return metadata
+
+
+def fetch_coowners(subject_fullname: str):
+    if subject_fullname is None:
+        return None
+    return (subject.SubjectCoowners() & f"subject_fullname = '{subject_fullname}' and active = 1").fetch("coowner")
+
+
+def fetch_owner(subject_fullname: str):
+    if subject_fullname is None:
+        return None
+    return (subject.Subject() & f"subject_fullname = '{subject_fullname}'").fetch()

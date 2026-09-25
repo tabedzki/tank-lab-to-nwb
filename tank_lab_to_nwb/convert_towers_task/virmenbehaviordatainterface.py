@@ -5,6 +5,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import override
 from zoneinfo import ZoneInfo
+import re
 
 import numpy as np
 from hdmf.backends.hdf5.h5_utils import H5DataIO
@@ -55,6 +56,7 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
         mat_file = self.source_data["file_path"]
         self._mat_dict = convert_mat_file_to_dict(mat_file)
         self._times = None
+        self._trial_frame_boundaries = None  # Cache for trial frame boundaries
 
     @override
     def get_timestamps(self) -> np.ndarray:
@@ -70,6 +72,7 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
             epochs: list[dict] = [metadata_copy["log"]["block"]]
         else:
             epochs: list[dict] = metadata_copy["log"]["block"]
+
         trials = [trial for epoch in epochs for trial in epoch["trial"] if not np.isnan(trial["start"])]
         # array_to_dt returns a naive datetime while _get_session_start_time is
         # tz-aware, so the subtraction below raised TypeError. It only ever
@@ -132,6 +135,121 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
         session_date = session_start_time.date()
 
         return {"subject_fullname": subject_fullname, "session_date": session_date}
+
+    def _get_trial_frame_boundaries(self) -> list[tuple[int, int]]:
+        """
+        Get the start and end frame indices for each trial in the global timestamp array.
+        
+        Returns
+        -------
+        list of tuple
+            List of (start_idx, end_idx) tuples for each trial's frames in the global timestamp array.
+            Indices are inclusive of start, exclusive of end (Python slice convention).
+        
+        Notes
+        -----
+        This method caches its result since trial boundaries are based on Virmen structure
+        and don't change when synchronized timestamps are applied.
+        """
+        if self._trial_frame_boundaries is not None:
+            return self._trial_frame_boundaries
+        
+        metadata_copy = deepcopy(self._mat_dict)
+        
+        if isinstance(metadata_copy["log"]["block"], dict):
+            epochs = [metadata_copy["log"]["block"]]
+        else:
+            epochs = metadata_copy["log"]["block"]
+        
+        trials = [trial for epoch in epochs for trial in epoch["trial"] if not np.isnan(trial["start"])]
+        
+        boundaries = []
+        current_idx = 0
+        for trial in trials:
+            frame_count = len(trial["time"])
+            boundaries.append((current_idx, current_idx + frame_count))
+            current_idx += frame_count
+        
+        self._trial_frame_boundaries = boundaries
+        return boundaries
+
+    def _convert_trial_iteration_to_timestamp(self, trial_idx: int, iteration_num: float) -> float:
+        """
+        Convert a trial-local iteration number to a session-relative timestamp.
+        
+        Parameters
+        ----------
+        trial_idx : int
+            Zero-based trial index
+        iteration_num : float
+            Iteration number (1-based Virmen convention) within the trial
+            
+        Returns
+        -------
+        float
+            Timestamp in seconds from session start, or NaN if invalid
+            
+        Notes
+        -----
+        - Virmen iteration numbers are 1-based (first frame = 1)
+        - Automatically uses synchronized timestamps if available via get_timestamps()
+        - Returns NaN for invalid iteration numbers (≤0, NaN, or beyond trial length)
+        """
+        # Handle invalid iteration numbers
+        if not np.isfinite(iteration_num) or iteration_num <= 0:
+            return np.nan
+        
+        # Convert to 0-based frame index
+        frame_idx = int(iteration_num) - 1
+        
+        # Get trial boundaries
+        boundaries = self._get_trial_frame_boundaries()
+        
+        if trial_idx >= len(boundaries):
+            return np.nan
+        
+        start_idx, end_idx = boundaries[trial_idx]
+        trial_frame_count = end_idx - start_idx
+        
+        # Check if frame index is within trial
+        if frame_idx >= trial_frame_count:
+            return np.nan
+        
+        # Get global frame index and look up timestamp
+        global_frame_idx = start_idx + frame_idx
+        timestamps = self.get_timestamps()
+        
+        if global_frame_idx >= len(timestamps):
+            return np.nan
+        
+        return float(timestamps[global_frame_idx])
+
+    def _local_frames_to_timestamps(self, trial_idx: int, local_frame_indices) -> np.ndarray:
+        """
+        Map trial-local frame indices to session-relative timestamps.
+
+        Parameters
+        ----------
+        trial_idx : int
+            Zero-based trial index.
+        local_frame_indices : array-like of int
+            Zero-based frame indices within the trial.
+
+        Returns
+        -------
+        np.ndarray
+            Timestamps in seconds from session start for the requested frames.
+            Uses synchronized (aligned) timestamps if available, otherwise Virmen
+            internal timing. This keeps cue/lick event times in the same reference
+            frame as the Position/Velocity series and the iteration markers.
+        """
+        boundaries = self._get_trial_frame_boundaries()
+        start_idx, end_idx = boundaries[trial_idx]
+        timestamps = self.get_timestamps()
+        global_indices = start_idx + np.asarray(local_frame_indices, dtype=int)
+        # Clamp to the trial's frame range to avoid leaking into adjacent trials
+        global_indices = np.clip(global_indices, start_idx, end_idx - 1)
+        return timestamps[global_indices]
 
     @classmethod
     def get_source_schema(cls):
@@ -264,6 +382,7 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
             stimulus_bank_path=subject_metadata["stimulusBank"] if subject_metadata["stimulusBank"] else "",
             commit_id=experiment_metadata["repository"],
             location=experiment_metadata["rig"]["rig"],
+
             num_trials=num_trials,
             session_end_time=session_end_time,
             rig=rig_extension,
@@ -429,6 +548,7 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
 
         trial_columns = [
             ("iterations", "number of iterations (frames) for entire trial"),
+            ("iStartEntry", "iteration number when trial started"),
             ("iCueEntry", "iteration number when subject entered cue region"),
             ("iMemEntry", "iteration number when subject entered memory region"),
             ("iTurnEntry", "iteration number when subject entered turn region"),
@@ -486,38 +606,41 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
 
         right_cue_presence = [trial["cueCombo"][1] if len(trial["cueCombo"]) else trial["cueCombo"] for trial in trials]
 
+        # Cue onset/offset times are resolved by indexing into the aligned timestamp
+        # source (synchronized if available, otherwise Virmen internal timing) so they
+        # remain in the same reference frame as Position/Velocity and iteration markers.
         left_cue_onset = []
-        for trial in trials:
+        for trial_idx, trial in enumerate(trials):
             if np.any(trial["cueOnset"][0]):
                 indices = np.minimum(trial["cueOnset"][0], trial["cueOnset"][0] - 1)
-                left_cue_onset_time = trial["start"] + epoch_start_nwb[0] + trial["time"][indices]
+                left_cue_onset_time = self._local_frames_to_timestamps(trial_idx, indices)
             else:
                 left_cue_onset_time = trial["cueOnset"][0]
             left_cue_onset.append(left_cue_onset_time)
 
         right_cue_onset = []
-        for trial in trials:
+        for trial_idx, trial in enumerate(trials):
             if np.any(trial["cueOnset"][1]):
                 indices = np.minimum(trial["cueOnset"][1], trial["cueOnset"][1] - 1)
-                right_cue_onset_time = trial["start"] + epoch_start_nwb[0] + trial["time"][indices]
+                right_cue_onset_time = self._local_frames_to_timestamps(trial_idx, indices)
             else:
                 right_cue_onset_time = trial["cueOnset"][1]
             right_cue_onset.append(right_cue_onset_time)
 
         left_cue_offset = []
-        for trial in trials:
+        for trial_idx, trial in enumerate(trials):
             if np.any(trial["cueOffset"][0]):
                 indices = np.minimum(trial["cueOffset"][0], trial["cueOffset"][0] - 1)
-                left_cue_offset_time = trial["start"] + epoch_start_nwb[0] + trial["time"][indices]
+                left_cue_offset_time = self._local_frames_to_timestamps(trial_idx, indices)
             else:
                 left_cue_offset_time = trial["cueOffset"][0]
             left_cue_offset.append(left_cue_offset_time)
 
         right_cue_offset = []
-        for trial in trials:
+        for trial_idx, trial in enumerate(trials):
             if np.any(trial["cueOffset"][1]):
                 indices = np.minimum(trial["cueOffset"][1], trial["cueOffset"][1] - 1)
-                right_cue_offset_time = trial["start"] + epoch_start_nwb[0] + trial["time"][indices]
+                right_cue_offset_time = self._local_frames_to_timestamps(trial_idx, indices)
             else:
                 right_cue_offset_time = trial["cueOffset"][1]
             right_cue_offset.append(right_cue_offset_time)
@@ -554,18 +677,12 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
         right_licks = []
 
         if "licks" in trials[0]:
-            for trial in trials:
-                left_stuff = (
-                    trial["start"]
-                    + epoch_start_nwb[0]
-                    + trial["time"][(trial["licks"][0][(trial["licks"][1] == 1)] - 1).astype(int).tolist()]
-                )
+            for trial_idx, trial in enumerate(trials):
+                left_lick_frames = (trial["licks"][0][(trial["licks"][1] == 1)] - 1).astype(int)
+                left_stuff = self._local_frames_to_timestamps(trial_idx, left_lick_frames)
                 left_licks.append(left_stuff)
-                right_stuff = (
-                    trial["start"]
-                    + epoch_start_nwb[0]
-                    + trial["time"][(trial["licks"][0][(trial["licks"][1] == 2)] - 1).astype(int).tolist()]
-                )
+                right_lick_frames = (trial["licks"][0][(trial["licks"][1] == 2)] - 1).astype(int)
+                right_stuff = self._local_frames_to_timestamps(trial_idx, right_lick_frames)
                 right_licks.append(right_stuff)
 
             trial_columns.extend(
@@ -575,57 +692,55 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
                 ]
             )
 
-        if "stimulusTable" in trial:
-            stimulusTable_columns = zip(
-                *[
-                    (
-                        trial["stimulusTable"][:, i] if len(trial["stimulusTable"]) else trial["stimulusTable"]
-                        for i in range(8)
-                    )
-                    for trial in trials
-                ]
-            )
+        # Create StimulusTable groups for each trial that has stimulus table data
+        stimulus_processing_module = check_module(nwbfile, "stimulus", "contains stimulus table data for trials")
 
-            # Unpack the transposed columns into separate variables
-            (
-                stimulusTable_pairNum,
-                stimulusTable_prob,
-                stimulusTable_side,
-                stimulusTable_freq_stimulus_one,
-                stimulusTable_freq_stimulus_two,
-                stimulusTable_cumulative_stimulus_hitrate,
-                stimulusTable_stimulus_ntimes_shown,
-                stimulusTable_stimulus_post_prob,
-            ) = stimulusTable_columns
+        for trial_idx, trial in enumerate(trials):
+            if "stimulusTable" in trial and len(trial["stimulusTable"]) > 0:
+                # Extract the 8 columns from the stimulus table
+                stimulus_data = trial["stimulusTable"]
 
-            stimulustable_column_descriptions = [
-                ("stimulusTable_pairNum", "row index"),
-                ("stimulusTable_prob", "Prior probability of each pair"),
-                ("stimulusTable_side", "Correct side for each pair"),
-                ("stimulusTable_freq_stimulus_one", "Frequency of first stimulus"),
-                ("stimulusTable_freq_stimulus_two", "Frequency of second stimulus"),
-                ("stimulusTable_cumulative_stimulus_hitrate", "Cumulative hitrate for this stimulus pair"),
-                ("stimulusTable_stimulus_ntimes_shown", "Number of times this pair has been shown"),
-                ("stimulusTable_stimulus_post_prob", "Posterior probability of showing this pair"),
-            ]
+                # Create a StimulusTable for this trial
+                stimulus_table = StimulusTable(
+                    name=f"trial_{trial_idx}_stimulus_table", description=f"Stimulus table for trial {trial_idx}"
+                )
 
-            trial_columns.extend(stimulustable_column_descriptions)
+                # Add the 8 columns according to the schema
+                stimulus_table.add_column(
+                    name="stimulusPairIndex",
+                    description="First column description",
+                    data=stimulus_data[:, 0].astype(int),
+                )
+                stimulus_table.add_column(
+                    name="priorProb", description="Second column description", data=stimulus_data[:, 1].astype(float)
+                )
+                stimulus_table.add_column(
+                    name="Side",
+                    description="Third column description",
+                    data=[str(side) for side in stimulus_data[:, 2]],
+                )
+                stimulus_table.add_column(
+                    name="Sa", description="Fourth column description", data=stimulus_data[:, 3].astype(int)
+                )
+                stimulus_table.add_column(
+                    name="Sb", description="Fifth column description", data=stimulus_data[:, 4].astype(int)
+                )
+                stimulus_table.add_column(
+                    name="FracHit",
+                    description="Sixth column description (can be NaN)",
+                    data=stimulus_data[:, 5].astype(int),
+                )
+                stimulus_table.add_column(
+                    name="Ntotal", description="Seventh column description", data=stimulus_data[:, 6].astype(int)
+                )
+                stimulus_table.add_column(
+                    name="posteriorProb",
+                    description="Eighth column description",
+                    data=stimulus_data[:, 7].astype(float),
+                )
 
-            # for num, trial_local in enumerate(trials, start = 1):
-            #     colnames = [x[0] for x in stimulustable_column_descriptions]
-            #     coldescrip = [x[1] for x in stimulustable_column_descriptions]
-            #     data = [VectorData(
-            #     data=trial_local['stimulusTable'][:, i],
-            #     name=colnames[i],
-            #     description = coldescrip[i],
-            #     ) for i in range(8)]
-            #     new_table_columns = DynamicTable(
-            #         name=f"stimulusTable_{num}",
-            #         description = f"stimulusTable for trial {num}",
-            #         colnames = [x[0] for x in stimulustable_column_descriptions],
-            #         columns = data,
-            #         )
-            #     nwbfile.trials.add_category(category=new_table_columns)
+                # Add the stimulus table to the processing module
+                stimulus_processing_module.add_data_interface(stimulus_table)
 
         for variable_name, description in trial_columns:
             try:
@@ -665,6 +780,32 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
         collision = []
         timestamp_indices = []  # Track which timestamps correspond to each frame
 
+        # Derive seconds-from-session-start columns for iteration-based keys (e.g., iCueEntry -> iCueEntrySeconds)
+        # These use synchronized timestamps if available, otherwise Virmen internal timing
+        iteration_keys = sorted(
+            {
+                key
+                for trial in trials
+                for key in trial
+                if isinstance(key, str) and re.match(r"^i[A-Z]", key)
+            }
+        )
+
+        # Add session-relative timestamp columns for each iteration marker
+        for key in iteration_keys:
+            values_seconds = []
+            for trial_idx, trial in enumerate(trials):
+                iteration_val = trial.get(key, np.nan)
+                timestamp = self._convert_trial_iteration_to_timestamp(trial_idx, iteration_val)
+                values_seconds.append(timestamp)
+
+            seconds_name = f"{key}Seconds"
+            seconds_desc = (
+                f"Time in seconds from session start when {key} occurred. "
+                f"Uses synchronized timestamps if available, otherwise Virmen internal timing."
+            )
+            nwbfile.add_trial_column(name=seconds_name, description=seconds_desc, data=values_seconds)
+
         current_timestamp_idx = 0
         for trial in trials:
             # Track indices for this trial's frames
@@ -687,6 +828,7 @@ class VirmenDataInterface(BaseTemporalAlignmentInterface):
 
         # Slice timestamps to match the data length
         timestamps = all_timestamps[timestamp_indices]
+
 
         # Create a Time timeseries for explicit time values
         time = TimeSeries(

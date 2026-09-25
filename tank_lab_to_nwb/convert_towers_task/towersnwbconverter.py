@@ -109,6 +109,15 @@ class TowersNWBConverter(NWBConverter):
         for key in source_data.keys():
             if key.startswith("Kilosort") and key not in self.data_interface_classes:
                 self.data_interface_classes[key] = KiloSortWithProbeInterface
+                
+                # Add electrode_group_name to source_data for this interface
+                if key == "Kilosort":
+                    electrode_group_name = "IMEC"
+                else:
+                    probe_id = key.replace("KilosortProbe", "")
+                    electrode_group_name = f"IMEC{probe_id}"
+                
+                source_data[key]["electrode_group_name"] = electrode_group_name
 
         # Same for imaging: a mesoscope session has one field of view per
         # TiffSplit ("ScanImageImagingFOV0", "ScanImageImagingFOV1", ...). Each
@@ -364,7 +373,8 @@ class TowersNWBConverter(NWBConverter):
         This method ensures that:
         1. Devices are created for each probe
         2. Electrode groups are created and linked to devices
-        3. Units can be traced back to their probe via electrode_group
+        3. Ecephys processing module is created before Kilosort interfaces add units
+        4. Each probe gets its own units table in processing/ecephys
         """
         # First, add devices and electrode groups from metadata
         from pynwb.device import Device
@@ -395,6 +405,31 @@ class TowersNWBConverter(NWBConverter):
                         )
                         nwbfile.add_electrode_group(electrode_group)
         
+        # Create ecephys processing module for Kilosort units tables
+        # This must be done before calling super() so interfaces can add to it
+        kilosort_interfaces = [name for name in self.data_interface_objects.keys() if name.startswith("Kilosort")]
+        if kilosort_interfaces and 'ecephys' not in nwbfile.processing:
+            nwbfile.create_processing_module(
+                name='ecephys',
+                description='Electrophysiology processing module containing spike sorting results from multiple probes'
+            )
+        
         # Call parent add_to_nwbfile to add all interface data
         super().add_to_nwbfile(nwbfile=nwbfile, metadata=metadata, conversion_options=conversion_options)
-        
+
+        # Persist behavioral_start_offset for traceability when provided via metadata.
+        # The LabMetaData extension has no field for it, so it is stored in scratch.
+        # This value is the delay (seconds) of the first behavioral frame relative to
+        # IMEC recording start (t=0); all timestamps in the file are already IMEC-relative.
+        behavioral_start_offset = (metadata or {}).get("LabMetaData", {}).get("behavioral_start_offset")
+        if behavioral_start_offset is not None and "behavioral_start_offset" not in nwbfile.scratch:
+            nwbfile.add_scratch(
+                np.float64(behavioral_start_offset),
+                name="behavioral_start_offset",
+                description=(
+                    "Delay in seconds of the first behavioral frame relative to IMEC "
+                    "recording start (t=0). All timestamps in this file are IMEC-relative; "
+                    "this is informational only and equals the first behavioral timestamp."
+                ),
+            )
+
