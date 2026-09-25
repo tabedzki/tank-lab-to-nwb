@@ -111,6 +111,20 @@ class TowersNWBConverter(NWBConverter):
             if key.startswith("ScanImageImaging") and key not in self.data_interface_classes:
                 self.data_interface_classes[key] = ScanImageImagingInterface
 
+        # Every ScanImage interface needs its own metadata_key. neuroconv's
+        # default depends only on channel and plane, so two fields of view with
+        # the same plane share one key and write the same TwoPhotonSeries name,
+        # which pynwb rejects. Default the key to the interface name, which is
+        # unique by construction. Copy rather than mutate the caller's dict.
+        source_data = {
+            key: (
+                {**value, "metadata_key": value.get("metadata_key") or key}
+                if key.startswith("ScanImageImaging")
+                else value
+            )
+            for key, value in source_data.items()
+        }
+
         super().__init__(source_data=source_data)
 
         # Check that VirmenData interface is present
@@ -240,6 +254,21 @@ class TowersNWBConverter(NWBConverter):
 
         metadata = super().get_metadata()
         metadata["NWBFile"].update(session_id=session_id, institution="Princeton", lab="Tank")
+
+        # Name each imaging interface's objects after its key, so
+        # "ScanImageImagingFOV1Plane2" writes TwoPhotonSeriesFOV1Plane2 on
+        # ImagingPlaneFOV1Plane2. neuroconv names them by plane only
+        # (TwoPhotonSeriesPlane2), which collides across fields of view.
+        ophys = metadata.get("Ophys", {})
+        for name, interface in self.data_interface_objects.items():
+            suffix = name[len("ScanImageImaging"):] if name.startswith("ScanImageImaging") else ""
+            if not suffix:
+                continue
+            key = interface.metadata_key
+            if key in ophys.get("ImagingPlanes", {}):
+                ophys["ImagingPlanes"][key]["name"] = f"ImagingPlane{suffix}"
+            if key in ophys.get("MicroscopySeries", {}):
+                ophys["MicroscopySeries"][key]["name"] = f"TwoPhotonSeries{suffix}"
 
         if vermin_file_path.is_file():
             session_data = convert_mat_file_to_dict(mat_file_name=vermin_file_path)
